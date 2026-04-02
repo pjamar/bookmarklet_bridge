@@ -115,7 +115,7 @@ Suggested support text:
 - Fill AMO summary from the `Summary` section above
 - Fill AMO description from the `Description` section above
 - Keep `AMO_REVIEW.md` aligned with actual behavior
-- Confirm the version in `assets/manifest.json`
+- Confirm the version in `assets/manifest.firefox.json`
 - Run `npm run build`
 - Run `npm run lint:amo`
 - Run `npm run sign:unlisted`

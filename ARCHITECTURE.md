@@ -61,6 +61,13 @@ Responsibilities:
 
 This is the only place that should execute network actions on behalf of the bridge.
 
+Today that background runtime is packaged in two browser-specific ways:
+
+- Firefox build: background script
+- Chrome build: Manifest V3 service worker
+
+That difference is why background state must be treated as disposable process memory, not durable state.
+
 ## End-To-End Flow
 
 ### Registration
@@ -179,6 +186,8 @@ Important split:
 - `store.ts` persists policy entries
 - `session-store.ts` tracks currently approved executions
 
+`session-store.ts` now persists active execution state to extension storage so a restarted background context can recover it.
+
 ### `src/background/actions/`
 
 Contains the concrete implementations of privileged actions.
@@ -260,15 +269,13 @@ Without that view, this experiment would be much harder to audit.
 The build pipeline is intentionally simple:
 
 1. TypeScript entry points are bundled with `esbuild`
-2. static assets are copied into `dist/`
-3. `web-ext` works from `dist/` for linting, packaging, and signing
+2. browser-specific manifests and static assets are copied into browser-specific build directories
+3. `web-ext` works from `dist/firefox/` for linting, packaging, and signing
 
 Primary packaged outputs:
 
-- `dist/background.js`
-- `dist/content.js`
-- `dist/options.js`
-- `dist/manifest.json`
+- Firefox package: `dist/firefox/`
+- Chrome package: `dist/chrome/`
 
 ## Current Architectural Tradeoffs
 

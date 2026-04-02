@@ -38,7 +38,7 @@ The extension has four main responsibilities:
 3. execute privileged bridge actions in the background script
 4. provide an options page for settings, policy review, logs, and bookmarklet generation
 
-The project currently targets Firefox and is packaged as a traditional WebExtension.
+The project currently runs primarily on Firefox, but the repository now carries both a Firefox Manifest V2 package and a Chrome Manifest V3 package so the migration work is explicit instead of implicit.
 
 ## Repository Tour
 
@@ -46,9 +46,9 @@ The project currently targets Firefox and is packaged as a traditional WebExtens
 - `src/content/`: page bridge listener, approval modal, and toast rendering
 - `src/options/`: options page UI for settings, policy inspection, logs, and the bookmarklet generator
 - `src/shared/`: shared types, constants, schema validation, canonicalization, and helpers
-- `assets/`: manifest and packaged static assets
+- `assets/`: browser-specific manifests and packaged static assets
 - `examples/`: simple pages for local testing
-- `scripts/build.mjs`: build script that bundles the extension into `dist/`
+- `scripts/build.mjs`: build script that emits browser-specific packages into `dist/firefox/` and `dist/chrome/`
 
 ## How The Extension Works
 
@@ -114,19 +114,27 @@ Install dependencies:
 npm install
 ```
 
-Build the extension:
+Build the Firefox extension:
 
 ```bash
 npm run build
 ```
 
-The build output is written to `dist/`.
+The Firefox build output is written to `dist/firefox`.
+
+Build the Chrome Manifest V3 package:
+
+```bash
+npm run build:chrome
+```
+
+That output is written to `dist/chrome`.
 
 Load it temporarily in Firefox:
 
 1. open `about:debugging#/runtime/this-firefox`
 2. choose `Load Temporary Add-on`
-3. select `dist/manifest.json`
+3. select `dist/firefox/manifest.json`
 
 After source changes:
 
@@ -135,7 +143,9 @@ After source changes:
 
 ## Useful Commands
 
-- `npm run build`: bundle the extension into `dist/`
+- `npm run build`: bundle the Firefox extension into `dist/firefox/`
+- `npm run build:chrome`: bundle the Chrome Manifest V3 extension into `dist/chrome/`
+- `npm run build:all`: build both browser targets
 - `npm run lint:amo`: run `web-ext lint` on the built extension
 - `npm run package:extension`: build a local ZIP in `web-ext-artifacts/`
 - `npm run sign:unlisted`: submit the build for Mozilla unlisted signing
@@ -157,7 +167,7 @@ When changing behavior, the main flows to test are:
 
 The current intended distribution path is:
 
-- Firefox
+- Firefox today
 - unlisted AMO signing
 - self-distributed signed XPI
 
@@ -171,9 +181,22 @@ Before signing:
 
 Important packaging details:
 
-- `assets/manifest.json` is the source of truth for packaged metadata
+- `assets/manifest.firefox.json` is the Firefox packaging manifest
+- `assets/manifest.chrome.json` is the Chrome Manifest V3 packaging manifest
 - the Gecko extension ID should stay stable
-- `scripts/build.mjs` copies the manifest, icons, and options HTML into `dist/`
+- `scripts/build.mjs` copies the manifest, icons, and options HTML into the target build directory
+
+## Manifest V3 Status
+
+Chrome requires Manifest V3, so the repo now includes an MV3 manifest and build target. The biggest behavioral difference is still the background runtime model: Chrome uses an extension service worker, while Firefox still relies on background scripts in practice for this project. Session persistence was added specifically so active execution state survives background restarts in the event-driven world.
+
+The remaining work is not “create an MV3 manifest”, because that part now exists. The remaining work is cross-browser verification:
+
+- verify the current background code behaves correctly when resumed as a service worker
+- test the content-script to background message flow in Chrome
+- decide whether the project should stay dual-manifest or move to a Firefox MV3 path when Firefox service worker support is mature enough for this extension
+
+For the current migration notes, read `MV3_PLAN.md`.
 
 ## Notes For Future Tweaks
 

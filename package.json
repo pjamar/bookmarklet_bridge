@@ -5,11 +5,14 @@
   "author": "Pablo Lopez-Jamar",
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "build": "node scripts/build.mjs --target=firefox",
+    "build:firefox": "node scripts/build.mjs --target=firefox",
+    "build:chrome": "node scripts/build.mjs --target=chrome",
+    "build:all": "node scripts/build.mjs --target=all",
     "clean": "rm -rf dist web-ext-artifacts",
-    "lint:amo": "web-ext lint --source-dir dist",
-    "package:extension": "npm run build && web-ext build --source-dir dist --artifacts-dir web-ext-artifacts --overwrite-dest",
-    "sign:unlisted": "npm run build && web-ext sign --source-dir dist --artifacts-dir web-ext-artifacts --channel unlisted"
+    "lint:amo": "npm run build:firefox && web-ext lint --source-dir dist/firefox",
+    "package:extension": "npm run build:firefox && web-ext build --source-dir dist/firefox --artifacts-dir web-ext-artifacts --overwrite-dest",
+    "sign:unlisted": "npm run build:firefox && web-ext sign --source-dir dist/firefox --artifacts-dir web-ext-artifacts --channel unlisted"
   },
   "devDependencies": {
     "esbuild": "^0.25.3",

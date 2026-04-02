@@ -8,7 +8,9 @@ browser.runtime.onMessage.addListener((message: InternalMessage, sender) => {
   });
 });
 
-browser.browserAction.onClicked.addListener(() => {
+const toolbarAction = browser.action ?? browser.browserAction;
+
+toolbarAction.onClicked.addListener(() => {
   void browser.runtime.openOptionsPage();
 });
 

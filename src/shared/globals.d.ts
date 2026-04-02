@@ -15,6 +15,11 @@ declare const browser: {
     sendMessage(message: any): Promise<any>;
     openOptionsPage(): Promise<void>;
   };
+  action?: {
+    onClicked: {
+      addListener(callback: () => void | Promise<void>): void;
+    };
+  };
   browserAction: {
     onClicked: {
       addListener(callback: () => void | Promise<void>): void;
