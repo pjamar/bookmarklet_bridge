@@ -27,7 +27,7 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
   const inferredActions = Array.isArray(approval.inferredActions) ? approval.inferredActions as string[] : [];
 
   return new Promise<BridgeResponse>((resolve) => {
-    shadow.innerHTML = "";
+    shadow.replaceChildren();
 
     const style = document.createElement("style");
     style.textContent = `
@@ -89,26 +89,52 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
     overlay.className = "overlay";
     const panel = document.createElement("div");
     panel.className = "panel";
-    panel.innerHTML = `
-      <h1>Bookmarklet Approval Required</h1>
-      <p>This bookmarklet wants to use Bookmarklet Bridge.</p>
-      <div class="meta">
-        <div class="label">Name</div><div>${escapeHtml(String(bookmarklet.name ?? input.message.bookmarklet.name))}</div>
-        <div class="label">Version</div><div>${escapeHtml(String(bookmarklet.version ?? input.message.bookmarklet.version))}</div>
-        <div class="label">Definition Hash</div><div>${escapeHtml(String(approval.definitionHash ?? ""))}</div>
-        <div class="label">Source Hash</div><div>${escapeHtml(String(approval.sourceHash ?? ""))}</div>
-        <div class="label">Inferred Actions</div><div class="chips">${inferredActions.map((action) => `<span class="chip">${escapeHtml(action)}</span>`).join("") || "<span class=\"chip\">none detected</span>"}</div>
-      </div>
-      <p><strong>Source</strong></p>
-      <pre><code data-highlight="javascript">${escapeHtml(String(approval.decodedSource ?? ""))}</code></pre>
-      <div class="actions"></div>
-    `;
+    const heading = document.createElement("h1");
+    heading.textContent = "Bookmarklet Approval Required";
+
+    const intro = document.createElement("p");
+    intro.textContent = "This bookmarklet wants to use Bookmarklet Bridge.";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    appendMetaRow(meta, "Name", String(bookmarklet.name ?? input.message.bookmarklet.name));
+    appendMetaRow(meta, "Version", String(bookmarklet.version ?? input.message.bookmarklet.version));
+    appendMetaRow(meta, "Definition Hash", String(approval.definitionHash ?? ""));
+    appendMetaRow(meta, "Source Hash", String(approval.sourceHash ?? ""));
+
+    const inferredActionsLabel = document.createElement("div");
+    inferredActionsLabel.className = "label";
+    inferredActionsLabel.textContent = "Inferred Actions";
+    const inferredActionsValue = document.createElement("div");
+    inferredActionsValue.className = "chips";
+    for (const action of inferredActions) {
+      inferredActionsValue.append(createChip(action));
+    }
+    if (inferredActions.length === 0) {
+      inferredActionsValue.append(createChip("none detected"));
+    }
+    meta.append(inferredActionsLabel, inferredActionsValue);
+
+    const sourceLabel = document.createElement("p");
+    const sourceStrong = document.createElement("strong");
+    sourceStrong.textContent = "Source";
+    sourceLabel.append(sourceStrong);
+
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    code.dataset.highlight = "javascript";
+    code.textContent = String(approval.decodedSource ?? "");
+    pre.append(code);
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+
+    panel.append(heading, intro, meta, sourceLabel, pre, actions);
 
     panel.querySelectorAll<HTMLElement>("[data-highlight]").forEach((element) => {
       highlightIntoElement(element, "javascript");
     });
 
-    const actions = panel.querySelector(".actions") as HTMLDivElement;
     for (const decision of APPROVAL_DECISIONS) {
       const button = document.createElement("button");
       button.dataset.decision = decision;
@@ -147,10 +173,20 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
   });
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+function appendMetaRow(container: HTMLElement, label: string, value: string): void {
+  const labelNode = document.createElement("div");
+  labelNode.className = "label";
+  labelNode.textContent = label;
+
+  const valueNode = document.createElement("div");
+  valueNode.textContent = value;
+
+  container.append(labelNode, valueNode);
+}
+
+function createChip(value: string): HTMLElement {
+  const chip = document.createElement("span");
+  chip.className = "chip";
+  chip.textContent = value;
+  return chip;
 }
