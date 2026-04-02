@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bookmarklet Bridge</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe6;
+        --paper: #fffaf0;
+        --ink: #1c1b18;
+        --muted: #675f55;
+        --line: #d3c7b6;
+        --accent: #184e3d;
+        --accent-2: #9e3d1f;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at top left, rgba(255,255,255,0.6), transparent 30%),
+          linear-gradient(180deg, #efe7d7 0%, var(--bg) 100%);
+        color: var(--ink);
+        font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        min-height: 100vh;
+      }
+      aside {
+        border-right: 1px solid var(--line);
+        padding: 24px;
+      }
+      main {
+        padding: 24px;
+      }
+      h1, h2, h3 { margin-top: 0; }
+      .title {
+        font-size: 24px;
+        margin-bottom: 6px;
+      }
+      .muted { color: var(--muted); }
+      nav button, .button {
+        width: 100%;
+        margin: 0 0 10px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255,255,255,0.8);
+        cursor: pointer;
+        text-align: left;
+        font: inherit;
+        position: relative;
+        z-index: 1;
+        pointer-events: auto;
+      }
+      nav button:hover { border-color: var(--accent); background: #f6fbf9; }
+      nav button.active { border-color: var(--accent); background: #eef6f3; }
+      nav button.nav-sand {
+        background: #f7efe0;
+        border-color: #dec7a4;
+      }
+      nav button.nav-sand:hover,
+      nav button.nav-sand.active {
+        background: #f3e7d1;
+        border-color: #caa777;
+      }
+      nav button.nav-mint {
+        background: #e8f5ee;
+        border-color: #bdddc9;
+      }
+      nav button.nav-mint:hover,
+      nav button.nav-mint.active {
+        background: #dff0e6;
+        border-color: #95c3a8;
+      }
+      nav button.nav-rose {
+        background: #fae8ec;
+        border-color: #e3bcc5;
+      }
+      nav button.nav-rose:hover,
+      nav button.nav-rose.active {
+        background: #f6dfe5;
+        border-color: #d499a7;
+      }
+      nav button.nav-sky {
+        background: #e8f2fb;
+        border-color: #bfd3eb;
+      }
+      nav button.nav-sky:hover,
+      nav button.nav-sky.active {
+        background: #deebf8;
+        border-color: #97bae0;
+      }
+      nav button.nav-gold {
+        background: #fbf2dc;
+        border-color: #e3cf9d;
+      }
+      nav button.nav-gold:hover,
+      nav button.nav-gold.active {
+        background: #f8ebca;
+        border-color: #d2b568;
+      }
+      .panel {
+        background: rgba(255,250,240,0.88);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px;
+        margin-bottom: 18px;
+      }
+      textarea, input, select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: white;
+        font: inherit;
+      }
+      textarea { min-height: 120px; }
+      textarea.editor {
+        min-height: 360px;
+        resize: vertical;
+        tab-size: 2;
+      }
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .ide-layout {
+        grid-template-columns: minmax(0, 1.4fr);
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .doc-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .doc-card {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255,255,255,0.72);
+      }
+      .doc-card p {
+        margin-top: 8px;
+      }
+      .doc-signature {
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .chip {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: white;
+        margin: 0 8px 8px 0;
+      }
+      .list-item {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: white;
+        margin-bottom: 10px;
+      }
+      .empty-state {
+        background: rgba(255,255,255,0.65);
+      }
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+      }
+      code {
+        font: inherit;
+      }
+      .button.inline {
+        width: auto;
+        padding-inline: 14px;
+        margin: 0;
+      }
+      .pastel-mint {
+        background: #e7f6ef;
+        border-color: #bddfcb;
+      }
+      .pastel-mint:hover {
+        background: #ddf1e7;
+        border-color: #98cbb0;
+      }
+      .pastel-sky {
+        background: #e8f3fb;
+        border-color: #bfd8ee;
+      }
+      .pastel-sky:hover {
+        background: #deedf9;
+        border-color: #9fc4e4;
+      }
+      .pastel-peach {
+        background: #fdece3;
+        border-color: #efc8b4;
+      }
+      .pastel-peach:hover {
+        background: #fbe3d6;
+        border-color: #e4b296;
+      }
+      .pastel-lilac {
+        background: #f1eafd;
+        border-color: #d5c1f0;
+      }
+      .pastel-lilac:hover {
+        background: #ece2fb;
+        border-color: #bfa2e8;
+      }
+      .pastel-sage {
+        background: #edf5df;
+        border-color: #c8d9a9;
+      }
+      .pastel-sage:hover {
+        background: #e5f0d3;
+        border-color: #aec57d;
+      }
+      .pastel-primary {
+        background: #dcefd7;
+        border-color: #94bb84;
+        color: #17351e;
+        font-weight: 700;
+      }
+      .pastel-primary:hover {
+        background: #d1e8ca;
+        border-color: #6ea15b;
+      }
+      .pastel-rose {
+        background: #fbe8ec;
+        border-color: #e8bcc7;
+      }
+      .pastel-rose:hover {
+        background: #f7dfe6;
+        border-color: #dc9faf;
+      }
+      .pastel-gold {
+        background: #fbf2d8;
+        border-color: #e4d09a;
+      }
+      .pastel-gold:hover {
+        background: #f7eac7;
+        border-color: #d7bc72;
+      }
+      .pastel-blue {
+        background: #e7eefb;
+        border-color: #bccceb;
+      }
+      .pastel-blue:hover {
+        background: #dde7f9;
+        border-color: #9db6e2;
+      }
+      .status {
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+      }
+      .status.success {
+        background: #eef6f3;
+        border-color: #b8d4c8;
+        color: #174f3a;
+      }
+      .status.error {
+        background: #fff1ea;
+        border-color: #e3b6a2;
+        color: #8e3417;
+      }
+      .hljs {
+        display: block;
+        overflow-x: auto;
+      }
+      @media (max-width: 840px) {
+        .app { grid-template-columns: 1fr; }
+        aside { border-right: 0; border-bottom: 1px solid var(--line); }
+        .grid.two { grid-template-columns: 1fr; }
+        .doc-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="./options.js"></script>
+  </body>
+  </html>

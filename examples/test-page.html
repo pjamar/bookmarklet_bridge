@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bookmarklet Bridge Test Page</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f0e6;
+        --panel: rgba(255, 250, 240, 0.92);
+        --ink: #1e1b16;
+        --muted: #6e6558;
+        --line: #d5c8b6;
+        --accent: #17524b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(255,255,255,0.7), transparent 28%),
+          linear-gradient(180deg, #efe4d2 0%, var(--bg) 100%);
+        font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 48px; }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--panel);
+        padding: 18px;
+        margin-bottom: 18px;
+      }
+      .grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; }
+      .bookmarklets { display: grid; gap: 12px; }
+      .bookmarklet {
+        display: block;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: white;
+        color: var(--ink);
+        text-decoration: none;
+      }
+      .bookmarklet strong { display: block; margin-bottom: 4px; color: var(--accent); }
+      .muted { color: var(--muted); }
+      label { display: grid; gap: 6px; margin-bottom: 12px; }
+      input, textarea, select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        font: inherit;
+        background: white;
+      }
+      textarea { min-height: 120px; }
+      pre {
+        margin: 0;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fffdfa;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 880px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="panel">
+        <h1>Bookmarklet Bridge Test Page</h1>
+        <p>
+          These examples use the simplified API:
+          <code>runBookmarklet({ name, version, run })</code>.
+        </p>
+        <p class="muted">
+          If the extension Allowed Origins list is empty, network requests will be allowed to any origin.
+          If not, add the test origin below.
+        </p>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <h2>Example Bookmarklets</h2>
+          <p class="muted">Drag these to your bookmarks bar or bookmark them directly.</p>
+          <div id="bookmarklets" class="bookmarklets"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Configuration</h2>
+          <label>
+            <span>Test Origin</span>
+            <input id="originInput" value="https://httpbin.org" />
+          </label>
+          <label>
+            <span>POST Notes</span>
+            <textarea id="notesInput">This POST includes page title, URL, current selection, and custom notes.</textarea>
+          </label>
+          <label>
+            <span>Method Preview</span>
+            <pre id="originPreview">https://httpbin.org</pre>
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      (function () {
+        const bookmarkletsNode = document.getElementById("bookmarklets");
+        const originInput = document.getElementById("originInput");
+        const notesInput = document.getElementById("notesInput");
+        const originPreview = document.getElementById("originPreview");
+
+        function helperSource() {
+          return `const BRIDGE_NAMESPACE = "bookmarklet-bridge";
+const BRIDGE_VERSION = 2;
+
+function bridgeSend(message) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      window.removeEventListener("message", onMessage);
+      reject(new Error("Bridge response timed out."));
+    }, 15000);
+
+    function onMessage(event) {
+      const data = event.data;
+      if (
+        !data ||
+        data.namespace !== BRIDGE_NAMESPACE ||
+        data.requestId !== message.requestId ||
+        typeof data.ok !== "boolean"
+      ) {
+        return;
+      }
+      clearTimeout(timeout);
+      window.removeEventListener("message", onMessage);
+      if (!data.ok) {
+        reject(new Error(data.error && data.error.message ? data.error.message : "Bridge request failed."));
+        return;
+      }
+      resolve(data.result);
+    }
+
+    window.addEventListener("message", onMessage);
+    window.postMessage(message, "*");
+  });
+}
+
+async function runBookmarklet({ name, version, run }) {
+  const executionId = crypto.randomUUID ? crypto.randomUUID() : "execution-" + String(Date.now());
+  await bridgeSend({
+    namespace: BRIDGE_NAMESPACE,
+    version: BRIDGE_VERSION,
+    kind: "register",
+    requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-register",
+    executionId,
+    bookmarklet: {
+      name,
+      version,
+      source: run.toString()
+    }
+  });
+
+  const bridge = {
+    post(url, body, options = {}) {
+      return bridgeSend({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-post",
+        executionId,
+        action: "post",
+        payload: {
+          url,
+          body,
+          headers: options.headers
+        }
+      });
+    },
+    get(url, options = {}) {
+      return bridgeSend({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-get",
+        executionId,
+        action: "get",
+        payload: {
+          url,
+          headers: options.headers
+        }
+      });
+    },
+    toast(message, options = {}) {
+      return bridgeSend({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-toast",
+        executionId,
+        action: "toast",
+        payload: {
+          message,
+          variant: options.variant,
+          durationMs: options.durationMs
+        }
+      });
+    }
+  };
+
+  return run(bridge);
+}`;
+        }
+
+        function buildSource(name, version, body) {
+          return `(function () {\n${indentBlock(helperSource(), 2)}\n\n  runBookmarklet({\n    name: ${JSON.stringify(name)},\n    version: ${version},\n    async run(bridge) {\n${indentBlock(body, 6)}\n    }\n  });\n})();`;
+        }
+
+        function indentBlock(value, spaces) {
+          const prefix = " ".repeat(spaces);
+          return value
+            .split("\n")
+            .map((line) => (line ? prefix + line : line))
+            .join("\n");
+        }
+
+        function render() {
+          const origin = originInput.value.trim();
+          const notes = notesInput.value.trim();
+          originPreview.textContent = origin || "(enter an origin)";
+
+          const sources = [
+            {
+              name: "Toast Test",
+              description: "Exercises bridge.toast only.",
+              source: buildSource(
+                "Bridge Test Toast",
+                1,
+                `    await bridge.toast("Bookmarklet Bridge toast test succeeded", {\n      variant: "success",\n      durationMs: 2400\n    });`
+              )
+            },
+            {
+              name: "GET Test",
+              description: "Fetches /get from the configured origin.",
+              source: buildSource(
+                "Bridge Test GET",
+                1,
+                `    const result = await bridge.get(${JSON.stringify(origin + "/get?source=bookmarklet-bridge")});\n    console.log(result);\n    await bridge.toast("GET finished", { variant: "success" });`
+              )
+            },
+            {
+              name: "POST Test",
+              description: "Posts page metadata and selection to /post on the configured origin.",
+              source: buildSource(
+                "Bridge Test POST",
+                1,
+                `    const selection = window.getSelection ? String(window.getSelection()).trim() : "";\n    const result = await bridge.post(${JSON.stringify(origin + "/post")}, {\n      title: document.title,\n      url: location.href,\n      selection,\n      notes: ${JSON.stringify(notes)},\n      createdAt: new Date().toISOString()\n    });\n    console.log(result);\n    await bridge.toast("POST finished", { variant: "success" });`
+              )
+            }
+          ];
+
+          bookmarkletsNode.innerHTML = "";
+          for (const bookmarklet of sources) {
+            const link = document.createElement("a");
+            link.className = "bookmarklet";
+            link.href = "javascript:" + encodeURIComponent(bookmarklet.source);
+
+            const title = document.createElement("strong");
+            title.textContent = bookmarklet.name;
+
+            const body = document.createElement("div");
+            body.textContent = bookmarklet.description;
+
+            const hint = document.createElement("div");
+            hint.className = "muted";
+            hint.textContent = "Right-click to bookmark, or drag to your bookmarks bar.";
+
+            link.append(title, body, hint);
+            bookmarkletsNode.append(link);
+          }
+        }
+
+        originInput.addEventListener("input", render);
+        notesInput.addEventListener("input", render);
+        render();
+      })();
+    </script>
+  </body>
+  </html>
