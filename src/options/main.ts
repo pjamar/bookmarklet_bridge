@@ -66,7 +66,7 @@ function render(): void {
   }
 
   const selectedPolicy = state.policies.find((policy) => policy.definitionHash === selectedPolicyHash) ?? null;
-  app.innerHTML = `
+  const markup = `
     <div class="app">
       <aside>
         <div class="title">Bookmarklet Bridge</div>
@@ -82,9 +82,17 @@ function render(): void {
       <main>${selectedPolicy ? renderPolicyDetail(selectedPolicy) : renderView(currentView)}</main>
     </div>
   `;
+  app.replaceChildren(createFragmentFromHtml(markup));
 
   applyHighlighting(app);
   bindEvents();
+}
+
+function createFragmentFromHtml(markup: string): DocumentFragment {
+  const parsed = new DOMParser().parseFromString(markup, "text/html");
+  const fragment = document.createDocumentFragment();
+  fragment.append(...parsed.body.childNodes);
+  return fragment;
 }
 
 function navButton(view: ViewName, label: string): string {
