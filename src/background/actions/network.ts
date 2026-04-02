@@ -7,7 +7,7 @@ function validateOrigin(url: URL, allowedOrigins: string[]): void {
   }
 }
 
-function sanitizeHeaders(headers: Record<string, string> | undefined): Record<string, string> {
+export function sanitizeHeaders(headers: Record<string, string> | undefined): Record<string, string> {
   const forbidden = new Set([
     "host",
     "content-length",

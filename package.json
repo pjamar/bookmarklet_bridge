@@ -10,6 +10,7 @@
     "build:chrome": "node scripts/build.mjs --target=chrome",
     "build:all": "node scripts/build.mjs --target=all",
     "clean": "rm -rf dist web-ext-artifacts",
+    "test": "vitest run",
     "lint:amo": "npm run build:firefox && web-ext lint --source-dir dist/firefox",
     "package:extension": "npm run build:firefox && web-ext build --source-dir dist/firefox --artifacts-dir web-ext-artifacts --overwrite-dest",
     "sign:unlisted": "npm run build:firefox && web-ext sign --source-dir dist/firefox --artifacts-dir web-ext-artifacts --channel unlisted"
@@ -17,6 +18,7 @@
   "devDependencies": {
     "esbuild": "^0.25.3",
     "typescript": "^5.8.3",
+    "vitest": "^4.1.2",
     "web-ext": "^10.1.0"
   },
   "dependencies": {
