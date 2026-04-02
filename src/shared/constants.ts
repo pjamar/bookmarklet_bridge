@@ -3,6 +3,7 @@ export const BRIDGE_VERSION = 2;
 export const SETTINGS_STORAGE_KEY = "bridge_settings";
 export const POLICIES_STORAGE_KEY = "bridge_policies";
 export const LOG_STORAGE_KEY = "bridge_logs";
+export const EXECUTION_SESSIONS_STORAGE_KEY = "bridge_execution_sessions";
 export const LOG_RETENTION_DAYS = 7;
 export const MAX_LOG_ENTRIES = 500;
 export const MAX_HEADERS = 20;

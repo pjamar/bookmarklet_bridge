@@ -1,4 +1,5 @@
 import type { InternalMessage } from "../shared/types";
+import { clearExecutionSessionsForTab } from "./policy/session-store";
 import { wrapInternalMessage } from "./router";
 
 browser.runtime.onMessage.addListener((message: InternalMessage, sender) => {
@@ -9,4 +10,8 @@ browser.runtime.onMessage.addListener((message: InternalMessage, sender) => {
 
 browser.browserAction.onClicked.addListener(() => {
   void browser.runtime.openOptionsPage();
+});
+
+browser.tabs.onRemoved.addListener((tabId) => {
+  void clearExecutionSessionsForTab(tabId);
 });

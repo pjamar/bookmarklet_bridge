@@ -20,6 +20,11 @@ declare const browser: {
       addListener(callback: () => void | Promise<void>): void;
     };
   };
+  tabs: {
+    onRemoved: {
+      addListener(callback: (tabId: number) => void | Promise<void>): void;
+    };
+  };
   storage: {
     local: {
       get(key?: string | string[] | Record<string, unknown>): Promise<Record<string, unknown>>;

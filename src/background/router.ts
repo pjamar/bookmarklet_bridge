@@ -41,7 +41,7 @@ function createSuccessResponse(
 
 async function executeAction(message: ActionMessage, sender: MessageSenderContext): Promise<BridgeResponse> {
   const settings = await getSettings();
-  const session = getExecutionSession(sender.tabId, message.executionId);
+  const session = await getExecutionSession(sender.tabId, message.executionId);
   switch (message.action) {
     case "post": {
       const result = await handlePost(message, settings);
@@ -129,7 +129,7 @@ async function handleRegisterMessage(
   }
 
   ensureAllowed(approval);
-  registerApprovedExecution(identity, sender, message.bookmarklet);
+  await registerApprovedExecution(identity, sender, message.bookmarklet);
   await appendLog({
     id: `${message.requestId}:register`,
     timestamp: new Date().toISOString(),
@@ -143,8 +143,8 @@ async function handleRegisterMessage(
   return createSuccessResponse(message.requestId, { registered: true });
 }
 
-function ensureExecutionRegistered(message: ActionMessage, sender: MessageSenderContext): void {
-  if (!hasExecutionSession(sender.tabId, message.executionId)) {
+async function ensureExecutionRegistered(message: ActionMessage, sender: MessageSenderContext): Promise<void> {
+  if (!(await hasExecutionSession(sender.tabId, message.executionId))) {
     throw new BridgeError(
       "invalid_request",
       "Bookmarklet must register successfully before issuing bridge actions."
@@ -159,7 +159,7 @@ async function handleBridgeMessage(
   if (message.kind === "register") {
     return handleRegisterMessage(message, sender);
   }
-  ensureExecutionRegistered(message, sender);
+  await ensureExecutionRegistered(message, sender);
   return executeAction(message, sender);
 }
 
@@ -198,7 +198,7 @@ async function handleApprovalDecision(
     });
   }
   ensureAllowed(approval);
-  registerApprovedExecution(identity, sender, message.bookmarklet);
+  await registerApprovedExecution(identity, sender, message.bookmarklet);
   return createSuccessResponse(message.requestId, { registered: true });
 }
 
@@ -240,7 +240,7 @@ export async function wrapInternalMessage(
     if (isBridgeError(error)) {
       if ("message" in message && message.message && message.message.kind === "action") {
         const actionMessage = message.message;
-        const session = getExecutionSession(sender.tabId, actionMessage.executionId);
+        const session = await getExecutionSession(sender.tabId, actionMessage.executionId);
         await appendLog({
           id: `${actionMessage.requestId}:error`,
           timestamp: new Date().toISOString(),

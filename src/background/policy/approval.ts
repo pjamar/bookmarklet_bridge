@@ -54,19 +54,19 @@ export async function applyApprovalDecision(
   );
 
   if (decision === "allow") {
-    registerExecutionSession(sender.tabId, identity.executionId, identity.definitionHash);
+    await registerExecutionSession(sender.tabId, identity.executionId, identity.definitionHash);
   } else {
-    revokeExecutionSession(sender.tabId, identity.executionId);
+    await revokeExecutionSession(sender.tabId, identity.executionId);
   }
   return decision;
 }
 
-export function registerApprovedExecution(
+export async function registerApprovedExecution(
   identity: ApprovalContext,
   sender: MessageSenderContext,
   bookmarklet?: BookmarkletRegistration
-): void {
-  registerExecutionSession(
+): Promise<void> {
+  await registerExecutionSession(
     sender.tabId,
     identity.executionId,
     identity.definitionHash,
