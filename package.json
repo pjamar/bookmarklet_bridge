@@ -1,0 +1,22 @@
+{
+  "name": "bookmarklet-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Pablo Lopez-Jamar",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "clean": "rm -rf dist web-ext-artifacts",
+    "lint:amo": "web-ext lint --source-dir dist",
+    "package:extension": "npm run build && web-ext build --source-dir dist --artifacts-dir web-ext-artifacts --overwrite-dest",
+    "sign:unlisted": "npm run build && web-ext sign --source-dir dist --artifacts-dir web-ext-artifacts --channel unlisted"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.3",
+    "typescript": "^5.8.3",
+    "web-ext": "^10.1.0"
+  },
+  "dependencies": {
+    "highlight.js": "^11.11.1"
+  }
+}
