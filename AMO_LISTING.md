@@ -6,7 +6,7 @@ It is meant to support release work, reviewer communication, and store metadata.
 
 ## Summary
 
-Bookmarklet Bridge gives user-run bookmarklets a small, reviewable bridge for cross-origin `GET`, `POST`, and in-page toast feedback.
+Bookmarklet Bridge gives user-run bookmarklets a small, reviewable bridge for cross-origin `GET`, `POST`, in-page toast feedback, and browser-managed text downloads.
 
 ## Description
 
@@ -18,6 +18,7 @@ The extension provides a small helper model:
 - `bridge.get(url, options?)`
 - `bridge.post(url, body, options?)`
 - `bridge.toast(message, options?)`
+- `bridge.download({ filename, content, mimeType? })`
 
 This keeps bookmarklets readable and easy to audit while still enabling workflows that normal page JavaScript cannot reliably perform on arbitrary websites.
 
@@ -26,6 +27,7 @@ Typical use cases:
 - save selected text, page title, and URL to a notes service
 - call an authenticated API from a bookmarklet
 - show lightweight status feedback on the current page
+- save generated Markdown, JSON, or CSV to a local file
 
 Each bookmarklet is explicitly run by the user and must be individually approved before it can use the bridge. Approval is tied to bookmarklet identity derived from its name, version, and readable source.
 
@@ -40,7 +42,7 @@ Bookmarklets remain useful because they are:
 - easy to share between technical users
 - usually easy to audit because the source is small and visible
 
-Bookmarklet Bridge keeps those strengths while adding a constrained path for network requests and in-page feedback.
+Bookmarklet Bridge keeps those strengths while adding a constrained path for network requests, in-page feedback, and small generated file exports.
 
 ## Permissions Explanation
 
@@ -65,6 +67,10 @@ Used to store:
 - per-bookmarklet allow / deny decisions
 - recent local execution logs
 
+### `downloads`
+
+Used only for the `bridge.download(...)` action so a bookmarklet can save generated text content through the browser download manager.
+
 ## Privacy / Data Use
 
 Bookmarklet Bridge does not send telemetry to the developer.
@@ -79,7 +85,7 @@ Depending on the bookmarklet, transmitted data may include:
 - bookmarklet-generated request bodies
 - user-provided request headers, including authentication headers where relevant
 
-The extension stores local approval decisions and recent execution logs, but it intentionally does not store POST bodies in the log.
+The extension stores local approval decisions and recent execution logs, but it intentionally does not store POST bodies or downloaded file contents in the log.
 
 ## Reviewer Notes Short Form
 
@@ -99,7 +105,7 @@ Suggested support text:
 
 ### Initial Release
 
-- Adds a Firefox bridge for bookmarklets that need cross-origin `GET`, `POST`, and in-page toast feedback
+- Adds a Firefox bridge for bookmarklets that need cross-origin `GET`, `POST`, in-page toast feedback, and text-file downloads
 - Includes per-bookmarklet approval, policy storage, and recent execution logging
 - Includes an options-page bookmarklet IDE and review tooling
 

@@ -11,6 +11,7 @@ Bookmarklet Bridge lets a user run their own bookmarklets against the current pa
 - `bridge.get`
 - `bridge.post`
 - `bridge.toast`
+- `bridge.download`
 
 The extension does not download or execute remote extension code. The bookmarklet source is supplied by the user through a bookmark they install themselves, and the extension shows approval UI before a new bookmarklet can use the bridge.
 
@@ -44,6 +45,7 @@ Approved bookmarklets can use a small helper API:
 - `bridge.get(url, options?)`
 - `bridge.post(url, body, options?)`
 - `bridge.toast(message, options?)`
+- `bridge.download({ filename, content, mimeType? })`
 
 The bridge also provides:
 
@@ -51,7 +53,7 @@ The bridge also provides:
 - bookmarklet identity derived from name, version, and readable source
 - readable source inspection in approval and options UI
 - per-bookmarklet stored decisions
-- recent execution logging without POST body retention
+- recent execution logging without POST body or download content retention
 
 The bridge does not expose arbitrary privileged extension APIs to page code.
 
@@ -68,6 +70,16 @@ Without broad host access:
 The extension does not inject remote scripts. It injects only its bundled content script.
 
 The broad permission is therefore about making the relay available on arbitrary pages, not about passive browsing surveillance.
+
+## Why `downloads` Is Requested
+
+The extension can save user-generated bookmarklet output through the browser download manager.
+
+This permission is used only for the narrow `bridge.download` action:
+
+- bookmarklets provide a filename and text content
+- the extension asks the browser to create the download
+- the extension does not gain arbitrary filesystem access
 
 ## Approval Model
 
@@ -92,7 +104,7 @@ the extension treats that as a new bookmarklet definition for approval purposes.
 
 ## Data Transmission
 
-The extension can transmit user-triggered bookmarklet data to remote endpoints through `bridge.get` and `bridge.post`.
+The extension can transmit user-triggered bookmarklet data to remote endpoints through `bridge.get` and `bridge.post`, and it can save user-triggered generated text through `bridge.download`.
 
 Typical transmitted data includes:
 

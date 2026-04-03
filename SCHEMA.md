@@ -16,6 +16,7 @@ runBookmarklet({
     await bridge.get("https://example.com/api/me");
     await bridge.post("https://example.com/api/items", { hello: "world" });
     await bridge.toast("Done");
+    await bridge.download({ filename: "example.txt", content: "Saved" });
   }
 });
 ```
@@ -121,6 +122,24 @@ After registration succeeds, actions reuse the same `executionId`.
 }
 ```
 
+### `download`
+
+```js
+{
+  namespace: "bookmarklet-bridge",
+  version: 2,
+  kind: "action",
+  requestId: "unique-string",
+  executionId: "same-execution-id",
+  action: "download",
+  payload: {
+    filename: "page-notes.md",
+    content: "# Saved",
+    mimeType: "text/markdown"
+  }
+}
+```
+
 ## Validation Rules
 
 ### Common Rules
@@ -154,6 +173,13 @@ After registration succeeds, actions reuse the same `executionId`.
 - `payload.message` is required
 - `variant` is optional
 - `durationMs` is optional and clamped
+
+### `download` Rules
+
+- `payload.filename` must be non-empty text
+- `payload.content` must be non-empty text
+- `payload.mimeType` is optional
+- payload size is capped
 
 ## Response Shape
 
@@ -199,6 +225,7 @@ The current system can return codes such as:
 - `payload_too_large`
 - `network_error`
 - `timeout`
+- `download_failed`
 - `bridge_internal_error`
 
 Not every code will appear in every path, but these are the meaningful categories for callers and logs.
@@ -211,7 +238,7 @@ During registration, the extension also derives review-oriented metadata:
 - `sourceHash`
 - `canonicalBookmarklet`
 - `decodedSource`
-- inferred actions such as `get`, `post`, and `toast`
+- inferred actions such as `get`, `post`, `toast`, and `download`
 
 Important limitation:
 
@@ -231,10 +258,11 @@ Entries may include:
 - action kind
 - target URL for network actions
 - toast text
+- downloaded filename, mime type, and size
 - HTTP status
 - error code
 
-The design intentionally avoids logging POST bodies.
+The design intentionally avoids logging POST bodies and download contents.
 
 ## Two Easy-To-Miss Implementation Details
 

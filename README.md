@@ -2,11 +2,12 @@
 
 Bookmarklet Bridge is a Firefox extension experiment for bookmarklets that need a small amount of privileged help from the browser.
 
-The current bridge exposes three actions:
+The current bridge exposes four actions:
 
 - `bridge.get(...)`
 - `bridge.post(...)`
 - `bridge.toast(...)`
+- `bridge.download(...)`
 
 The project is currently vibe-coded and being reviewed little by little while its author learns more about building browser extensions. That matters for the documentation: the goal here is to describe what the project currently does, where the moving parts live, and how another developer can tweak it without having to reconstruct the whole idea from the code first.
 
@@ -64,7 +65,7 @@ The normal flow is:
 2. the helper registers that bookmarklet with the extension
 3. the extension checks whether this bookmarklet identity was already allowed or denied
 4. if needed, the content script shows an approval modal on the current page
-5. once approved, the bookmarklet can call `bridge.get`, `bridge.post`, and `bridge.toast`
+5. once approved, the bookmarklet can call `bridge.get`, `bridge.post`, `bridge.toast`, and `bridge.download`
 6. the background script validates the action, executes it, and records a safe log entry
 
 Approval is tied to bookmarklet identity derived from:
@@ -161,6 +162,7 @@ When changing behavior, the main flows to test are:
 - an approved bookmarklet can call `bridge.get`
 - an approved bookmarklet can call `bridge.post`
 - an approved bookmarklet can call `bridge.toast`
+- an approved bookmarklet can call `bridge.download`
 - policy and log views update as expected
 
 ## Signing And Distribution

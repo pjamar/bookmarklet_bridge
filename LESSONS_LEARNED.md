@@ -60,16 +60,18 @@ That is why the extension keeps things like:
 - error code
 
 and intentionally avoids storing POST bodies.
+It also intentionally avoids storing downloaded file contents.
 
 ## Packaging
 
 ### Explicit asset copying is easier to reason about
 
-The build is clearer when it copies known files into `dist/` instead of treating the whole asset tree as a black box.
+The build is clearer when it copies known files into browser-specific build directories instead of treating the whole asset tree as a black box.
 
 The current important assets are:
 
-- `assets/manifest.json`
+- `assets/manifest.firefox.json`
+- `assets/manifest.chrome.json`
 - `assets/icons/`
 - `src/options/index.html`
 

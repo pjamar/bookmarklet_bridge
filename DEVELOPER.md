@@ -21,6 +21,7 @@ runBookmarklet({
     await bridge.get("https://example.com/api/me");
     await bridge.post("https://example.com/api/items", { hello: "world" });
     await bridge.toast("Done");
+    await bridge.download({ filename: "example.txt", content: "Saved" });
   }
 });
 ```
@@ -94,6 +95,26 @@ await bridge.toast("Saved", {
 });
 ```
 
+### `bridge.download({ filename, content, mimeType? })`
+
+Use this to save generated text content through the browser download manager.
+
+Example:
+
+```js
+await bridge.download({
+  filename: "page-notes.md",
+  content: `# ${document.title || "Untitled"}\n\n${location.href}`,
+  mimeType: "text/markdown"
+});
+```
+
+Important constraints:
+
+- `content` is text, not an arbitrary binary blob
+- filenames are sanitized before the browser sees them
+- large payloads are rejected
+
 ## Suggested Bookmarklet Style
 
 The bookmarklet should stay focused on:
@@ -127,6 +148,12 @@ runBookmarklet({
     await bridge.post("https://mem.octosoc.eu/api/v1/memos", {
       content,
       visibility: "PRIVATE"
+    });
+
+    await bridge.download({
+      filename: "memo-source.md",
+      content,
+      mimeType: "text/markdown"
     });
 
     await bridge.toast("Memo added", {
@@ -188,6 +215,7 @@ If behavior seems surprising, check the options page before changing code.
 - keep DOM scraping in the bookmarklet, not in the extension
 - keep network URLs explicit
 - send JSON-friendly payloads
+- keep downloads small and explicit
 - use toast messages for visible feedback
 - bump the bookmarklet version when behavior changes materially
 
@@ -249,7 +277,7 @@ If you are changing the extension itself, the most important files are:
 - `src/content/bridge-listener.ts`: page relay logic
 - `src/content/approval-modal.ts`: approval UI
 - `src/background/router.ts`: central background controller
-- `src/background/actions/get.ts` and `src/background/actions/post.ts`: network action behavior
+- `src/background/actions/`: concrete privileged action behavior
 - `src/background/policy/`: identity, persistence, and execution session handling
 - `src/shared/schema.ts` and `src/shared/types.ts`: shared contract
 
