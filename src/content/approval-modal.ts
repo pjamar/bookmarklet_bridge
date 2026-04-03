@@ -374,9 +374,10 @@ function createSettingCard(key: string, definition: BookmarkletSettingDefinition
   const card = document.createElement("div");
   card.style.marginBottom = "12px";
   card.style.padding = "12px 14px";
-  card.style.border = "1px solid #d8ccb9";
+  card.style.border = "1px solid var(--line)";
   card.style.borderRadius = "10px";
-  card.style.background = "#fffdf8";
+  card.style.background = "var(--paper-strong)";
+  card.style.color = "var(--ink)";
 
   const title = document.createElement("p");
   title.innerHTML = `<strong>${escapeHtml(definition.label)}</strong> <code>${escapeHtml(key)}</code>`;
