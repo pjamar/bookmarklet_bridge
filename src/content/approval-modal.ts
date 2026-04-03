@@ -1,4 +1,4 @@
-import { APPROVAL_DECISIONS, APPROVAL_HOST_ID, INTERNAL_MESSAGE_KIND } from "../shared/constants";
+import { APPROVAL_DECISIONS, APPROVAL_HOST_ID, INTERNAL_MESSAGE_KIND, SETTINGS_STORAGE_KEY } from "../shared/constants";
 import { formatGeneratorJavaScript } from "../shared/generator-format";
 import { HIGHLIGHT_THEME, highlightIntoElement } from "../shared/highlight";
 import { renderMarkdown } from "../shared/markdown";
@@ -27,6 +27,12 @@ function ensureRoot(): ShadowRoot {
 
 export async function promptForApproval(input: ApprovalPromptInput): Promise<BridgeResponse> {
   const shadow = ensureRoot();
+  const storedSettings = (await browser.storage.local.get(SETTINGS_STORAGE_KEY))[SETTINGS_STORAGE_KEY] as
+    | { themeMode?: string }
+    | undefined;
+  const themeMode =
+    storedSettings?.themeMode === "light" || storedSettings?.themeMode === "dark" ? storedSettings.themeMode : "active";
+  shadow.host.dataset.themeMode = themeMode;
   const details = !input.response.ok && input.response.error.details && typeof input.response.error.details === "object"
     ? (input.response.error.details as Record<string, unknown>)
     : {};
@@ -63,6 +69,12 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
         --code-deletion: #9b4f44;
         --code-meta: #705f4d;
       }
+      :host([data-theme-mode="light"]) {
+        color-scheme: light;
+      }
+      :host([data-theme-mode="dark"]) {
+        color-scheme: dark;
+      }
       @media (prefers-color-scheme: dark) {
         :host {
           --bg: #1a1f24;
@@ -87,6 +99,52 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
           --code-deletion: #d6887a;
           --code-meta: #b79c7f;
         }
+      }
+      :host([data-theme-mode="light"]) {
+        --bg: #e9e7e2;
+        --paper: #f8f7f4;
+        --paper-strong: #fcfbf8;
+        --ink: #22211f;
+        --muted: #706b63;
+        --line: #c8c1b7;
+        --accent: #2e6664;
+        --accent-strong: #234d4c;
+        --danger: #a56a43;
+        --overlay: rgba(15, 19, 24, 0.48);
+        --code-ink: #23211e;
+        --code-comment: #7b756e;
+        --code-keyword: #9a5734;
+        --code-number: #8c6a2a;
+        --code-string: #2d6a66;
+        --code-function: #3b5f8e;
+        --code-property: #74608d;
+        --code-punctuation: #6f6962;
+        --code-built-in: #356a4d;
+        --code-deletion: #9b4f44;
+        --code-meta: #705f4d;
+      }
+      :host([data-theme-mode="dark"]) {
+        --bg: #1a1f24;
+        --paper: #20272d;
+        --paper-strong: #263038;
+        --ink: #e7e2db;
+        --muted: #ada69d;
+        --line: #3a474f;
+        --accent: #79a7a5;
+        --accent-strong: #9dc2c1;
+        --danger: #c48b63;
+        --overlay: rgba(4, 7, 11, 0.68);
+        --code-ink: #e7e2db;
+        --code-comment: #8e9a96;
+        --code-keyword: #d3976d;
+        --code-number: #d0b26b;
+        --code-string: #89c3bb;
+        --code-function: #93b5dd;
+        --code-property: #b4a0d1;
+        --code-punctuation: #9b958d;
+        --code-built-in: #8dc09d;
+        --code-deletion: #d6887a;
+        --code-meta: #b79c7f;
       }
       .overlay {
         position: fixed;

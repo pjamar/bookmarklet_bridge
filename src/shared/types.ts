@@ -69,6 +69,59 @@ export interface BookmarkletRegistration {
   settings?: BookmarkletSettingsSchema;
 }
 
+export interface BridgeRequestOptions {
+  headers?: Record<string, string>;
+}
+
+export interface BookmarkletBridgeDownloadOptions {
+  filename: string;
+  content?: string;
+  bytesBase64?: string;
+  mimeType?: string;
+}
+
+export interface BookmarkletBridgeDownloadUrlOptions {
+  url: string;
+  filename?: string;
+}
+
+export interface BookmarkletBridgeToastOptions {
+  variant?: ToastVariant;
+  durationMs?: number;
+}
+
+export interface BookmarkletBridgeApi {
+  getSettings(): Promise<BookmarkletSettingsValues>;
+  get(url: string, options?: BridgeRequestOptions): Promise<JsonValue | { [key: string]: JsonValue }>;
+  post(
+    url: string,
+    body?: JsonValue,
+    options?: BridgeRequestOptions
+  ): Promise<JsonValue | { [key: string]: JsonValue }>;
+  toast(message: string, options?: BookmarkletBridgeToastOptions): Promise<JsonValue | { [key: string]: JsonValue }>;
+  download(
+    options: BookmarkletBridgeDownloadOptions
+  ): Promise<JsonValue | { [key: string]: JsonValue }>;
+  downloadUrl(
+    options: BookmarkletBridgeDownloadUrlOptions
+  ): Promise<JsonValue | { [key: string]: JsonValue }>;
+  copyText(text: string): Promise<JsonValue | { [key: string]: JsonValue }>;
+}
+
+export interface BookmarkletBridgeConfig {
+  name: string;
+  version: number;
+  extendedDescription?: string;
+  settings?: BookmarkletSettingsSchema;
+  run(bridge: BookmarkletBridgeApi): Promise<unknown> | unknown;
+}
+
+export interface BookmarkletBridgeGlobal {
+  version: number;
+  isAvailable(): boolean;
+  run(config: BookmarkletBridgeConfig): Promise<unknown>;
+}
+
 export interface RegisterMessage {
   namespace: string;
   version: number;
@@ -235,6 +288,7 @@ export interface ExecutionLogEntry {
 }
 
 export interface BridgeSettings {
+  themeMode: "active" | "light" | "dark";
   allowedOrigins: string[];
   toastDefaults: {
     durationMs: number;
@@ -293,6 +347,35 @@ export interface ClearLogsMessage {
   kind: typeof INTERNAL_MESSAGE_KIND.CLEAR_LOGS;
 }
 
+export interface BridgeConfigurationExport {
+  format: "bookmarklet-bridge-config";
+  version: 1;
+  exportedAt: string;
+  settings: BridgeSettings;
+  approvedPolicies: PolicyEntry[];
+  bookmarkletSettingsSchemas: BookmarkletSettingsSchemaMap;
+  bookmarkletSettingsValues: BookmarkletSettingsValueMap;
+}
+
+export interface EncryptedBridgeConfigurationExport {
+  format: "bookmarklet-bridge-encrypted-config";
+  version: 1;
+  app: "Bookmarklet Bridge";
+  exportedAt: string;
+  scope: "approved-policies-and-settings";
+  kdf: "PBKDF2";
+  cipher: "AES-GCM";
+  iterations: number;
+  saltBase64: string;
+  ivBase64: string;
+  ciphertextBase64: string;
+}
+
+export interface ImportConfigurationMessage {
+  kind: typeof INTERNAL_MESSAGE_KIND.IMPORT_CONFIGURATION;
+  payload: BridgeConfigurationExport;
+}
+
 export type InternalMessage =
   | BridgeMessageEnvelope
   | ApprovalDecisionMessage
@@ -301,4 +384,5 @@ export type InternalMessage =
   | SetPolicyDecisionMessage
   | DeletePolicyMessage
   | SaveBookmarkletSettingsValuesMessage
-  | ClearLogsMessage;
+  | ClearLogsMessage
+  | ImportConfigurationMessage;

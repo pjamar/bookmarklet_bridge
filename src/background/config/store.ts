@@ -11,6 +11,7 @@ import { BridgeError } from "../../shared/errors";
 import type { BridgeSettings } from "../../shared/types";
 
 const DEFAULT_SETTINGS: BridgeSettings = {
+  themeMode: "active",
   allowedOrigins: [],
   toastDefaults: {
     durationMs: DEFAULT_TOAST_DURATION_MS
@@ -43,6 +44,10 @@ export async function getSettings(): Promise<BridgeSettings> {
   const result = await browser.storage.local.get(SETTINGS_STORAGE_KEY);
   const stored = result[SETTINGS_STORAGE_KEY] as Partial<BridgeSettings> | undefined;
   return {
+    themeMode:
+      stored?.themeMode === "light" || stored?.themeMode === "dark" || stored?.themeMode === "active"
+        ? stored.themeMode
+        : DEFAULT_SETTINGS.themeMode,
     allowedOrigins: normalizeOrigins(stored?.allowedOrigins ?? DEFAULT_SETTINGS.allowedOrigins),
     toastDefaults: {
       durationMs: clamp(stored?.toastDefaults?.durationMs, MIN_TOAST_DURATION_MS, MAX_TOAST_DURATION_MS, DEFAULT_TOAST_DURATION_MS)
@@ -55,6 +60,10 @@ export async function getSettings(): Promise<BridgeSettings> {
 
 export async function saveSettings(settings: BridgeSettings): Promise<BridgeSettings> {
   const normalized: BridgeSettings = {
+    themeMode:
+      settings.themeMode === "light" || settings.themeMode === "dark" || settings.themeMode === "active"
+        ? settings.themeMode
+        : DEFAULT_SETTINGS.themeMode,
     allowedOrigins: normalizeOrigins(settings.allowedOrigins),
     toastDefaults: {
       durationMs: clamp(settings.toastDefaults.durationMs, MIN_TOAST_DURATION_MS, MAX_TOAST_DURATION_MS, DEFAULT_TOAST_DURATION_MS)

@@ -41,6 +41,7 @@ interface GeneratorDraft {
 
 let state: BridgeState = {
   settings: {
+    themeMode: "active",
     allowedOrigins: [],
     toastDefaults: { durationMs: 2200 },
     requestDefaults: { timeoutMs: 10000 }
@@ -191,6 +192,14 @@ function renderSettings(): string {
         </label>
         <div class="grid two">
           <label>
+            <div>Theme</div>
+            <select id="themeMode">
+              <option value="active" ${state.settings.themeMode === "active" ? "selected" : ""}>Follow Browser</option>
+              <option value="light" ${state.settings.themeMode === "light" ? "selected" : ""}>Light</option>
+              <option value="dark" ${state.settings.themeMode === "dark" ? "selected" : ""}>Dark</option>
+            </select>
+          </label>
+          <label>
             <div>Request Timeout (ms)</div>
             <input id="timeoutMs" type="number" value="${state.settings.requestDefaults.timeoutMs}" />
           </label>
@@ -200,6 +209,7 @@ function renderSettings(): string {
           </label>
         </div>
       </div>
+      <p class="muted">Theme can follow the active browser appearance or be pinned to light or dark for the management UI.</p>
       <div class="row" style="margin-top:16px;">
         <button id="saveSettings" class="button inline pastel-primary">Save Settings</button>
         <button id="exportEncryptedConfiguration" class="button inline pastel-blue">Export Encrypted Backup</button>
@@ -962,6 +972,11 @@ function populateGeneratorFromScanResult(entry: BridgeBookmarkletScanResult): vo
 }
 
 function bindEvents(): void {
+  document.getElementById("themeMode")?.addEventListener("change", () => {
+    syncThemeFromDom();
+    applyThemeMode();
+  });
+
   document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
       selectedPolicyHash = null;
@@ -973,7 +988,9 @@ function bindEvents(): void {
   });
 
   document.getElementById("saveSettings")?.addEventListener("click", async () => {
+    syncThemeFromDom();
     const settings: BridgeSettings = {
+      themeMode: state.settings.themeMode,
       allowedOrigins: (document.getElementById("allowedOrigins") as HTMLTextAreaElement).value
         .split("\n")
         .map((value) => value.trim())
@@ -1312,6 +1329,7 @@ function insertIntoGenerator(snippet: string): void {
 
 async function refresh(): Promise<void> {
   await loadState();
+  applyThemeMode();
   render();
 }
 
@@ -1330,6 +1348,15 @@ function ensureHighlightTheme(): void {
   style.id = "bookmarklet-bridge-highlight-theme";
   style.textContent = HIGHLIGHT_THEME;
   document.head.append(style);
+}
+
+function syncThemeFromDom(): void {
+  const themeMode = (document.getElementById("themeMode") as HTMLSelectElement | null)?.value;
+  state.settings.themeMode = themeMode === "light" || themeMode === "dark" ? themeMode : "active";
+}
+
+function applyThemeMode(): void {
+  document.documentElement.dataset.themeMode = state.settings.themeMode;
 }
 
 function escapeHtml(value: string): string {
