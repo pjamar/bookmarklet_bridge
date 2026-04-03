@@ -29,12 +29,13 @@ describe("buildIdentity", () => {
           await bridge.post("https://example.com/post", { ok: true });
           await bridge.get("https://example.com/get");
           await bridge.toast("Done");
+          await bridge.download({ filename: "notes.md", content: "ok" });
           await bridge.get("https://example.com/again");
         }
       `
     });
 
-    expect(identity.inferredActions).toEqual(["post", "get", "toast"]);
+    expect(identity.inferredActions).toEqual(["post", "get", "toast", "download"]);
   });
 
   test("does not infer actions from similarly named identifiers", async () => {
