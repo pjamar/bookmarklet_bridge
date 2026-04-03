@@ -52,6 +52,10 @@ export interface DownloadPayload {
   mimeType?: string;
 }
 
+export interface ClipboardPayload {
+  text: string;
+}
+
 export interface PostActionMessage extends ActionMessageBase {
   action: "post";
   payload: PostPayload;
@@ -72,7 +76,17 @@ export interface DownloadActionMessage extends ActionMessageBase {
   payload: DownloadPayload;
 }
 
-export type ActionMessage = PostActionMessage | GetActionMessage | ToastActionMessage | DownloadActionMessage;
+export interface ClipboardActionMessage extends ActionMessageBase {
+  action: "copyText";
+  payload: ClipboardPayload;
+}
+
+export type ActionMessage =
+  | PostActionMessage
+  | GetActionMessage
+  | ToastActionMessage
+  | DownloadActionMessage
+  | ClipboardActionMessage;
 export type BridgeMessage = RegisterMessage | ActionMessage;
 
 export interface BridgeSuccessResponse {

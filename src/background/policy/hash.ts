@@ -4,7 +4,7 @@ import type { BookmarkletRegistration, BridgeAction } from "../../shared/types";
 
 function inferActions(source: string): BridgeAction[] {
   const inferred: BridgeAction[] = [];
-  for (const action of ["post", "get", "toast", "download"] as const) {
+  for (const action of ["post", "get", "toast", "download", "copyText"] as const) {
     const pattern = new RegExp(`\\bbridge\\.${action}\\b`);
     if (pattern.test(source)) {
       inferred.push(action);

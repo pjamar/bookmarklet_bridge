@@ -44,3 +44,9 @@ declare const browser: {
     };
   };
 };
+
+declare const navigator: Navigator & {
+  clipboard: {
+    writeText(text: string): Promise<void>;
+  };
+};

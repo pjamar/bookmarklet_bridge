@@ -3,7 +3,7 @@ import { HIGHLIGHT_THEME, highlightIntoElement } from "../shared/highlight";
 import type { BridgeSettings, BridgeState, ExecutionLogEntry, PolicyEntry } from "../shared/types";
 
 type ViewName = "settings" | "approved" | "denied" | "log" | "generator";
-type GeneratorSnippet = "toast" | "get" | "post" | "download" | "tryCatch";
+type GeneratorSnippet = "toast" | "get" | "post" | "download" | "copyText" | "tryCatch";
 
 interface GeneratorDraft {
   name: string;
@@ -254,6 +254,7 @@ function renderGenerator(): string {
           <button id="generatorSnippetGet" class="button inline pastel-sky" data-snippet="get">Insert GET</button>
           <button id="generatorSnippetPost" class="button inline pastel-peach" data-snippet="post">Insert POST</button>
           <button id="generatorSnippetDownload" class="button inline pastel-gold" data-snippet="download">Insert download</button>
+          <button id="generatorSnippetCopyText" class="button inline pastel-blue" data-snippet="copyText">Insert copyText</button>
           <button id="generatorSnippetTryCatch" class="button inline pastel-lilac" data-snippet="tryCatch">Insert try/catch</button>
         </div>
         <div class="row">
@@ -302,6 +303,15 @@ console.log(result);`
   content: "# " + (document.title || "Untitled") + "\\n\\n" + location.href,
   mimeType: "text/markdown"
 });`
+        )}
+        ${renderGeneratorActionDoc(
+          "bridge.copyText(text)",
+          "Copy generated text through the extension clipboard permission. Copied text is not stored in logs.",
+          `await bridge.copyText([
+  document.title || "Untitled",
+  location.href,
+  window.getSelection ? String(window.getSelection()).trim() : ""
+].filter(Boolean).join("\\n"));`
         )}
       </div>
       <p class="muted">The helper already handles registration, execution ids, request ids, and <code>window.postMessage</code>. Keep bookmarklet logic inside <code>run(bridge)</code>.</p>
@@ -608,6 +618,19 @@ async function runBookmarklet({ name, version, run }) {
           mimeType: options.mimeType
         }
       });
+    },
+    copyText(text) {
+      return bridgeSend({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-copy-text",
+        executionId,
+        action: "copyText",
+        payload: {
+          text
+        }
+      });
     }
   };
 
@@ -718,6 +741,8 @@ function buildSnippet(snippet: GeneratorSnippet): string {
       return `const result = await bridge.post("https://example.com/api/items", {\n  title: document.title,\n  url: location.href,\n  selection: window.getSelection ? String(window.getSelection()).trim() : ""\n}, {\n  headers: {\n    "Content-Type": "application/json"\n  }\n});\nconsole.log(result);`;
     case "download":
       return `await bridge.download({\n  filename: "page-notes.md",\n  content: [\n    "# " + (document.title || "Untitled"),\n    "",\n    location.href,\n    "",\n    window.getSelection ? String(window.getSelection()).trim() : ""\n  ].join("\\n"),\n  mimeType: "text/markdown"\n});`;
+    case "copyText":
+      return `await bridge.copyText([\n  document.title || "Untitled",\n  location.href,\n  "",\n  window.getSelection ? String(window.getSelection()).trim() : ""\n].filter(Boolean).join("\\n"));`;
     case "tryCatch":
       return `try {\n  // bridge calls here\n} catch (error) {\n  console.error(error);\n  await bridge.toast(error instanceof Error ? error.message : "Bookmarklet failed", {\n    variant: "error",\n    durationMs: 3200\n  });\n}`;
   }

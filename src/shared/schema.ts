@@ -3,6 +3,7 @@ import {
   BRIDGE_NAMESPACE,
   BRIDGE_VERSION,
   MAX_BODY_BYTES,
+  MAX_CLIPBOARD_TEXT_BYTES,
   MAX_DOWNLOAD_BYTES,
   MAX_HEADERS,
   TOAST_VARIANTS
@@ -17,6 +18,7 @@ import type {
   JsonValue,
   PostPayload,
   RegisterMessage,
+  ClipboardPayload,
   DownloadPayload,
   ToastPayload
 } from "./types";
@@ -163,6 +165,17 @@ function parseDownloadPayload(value: unknown): DownloadPayload {
   };
 }
 
+function parseClipboardPayload(value: unknown): ClipboardPayload {
+  if (!isPlainObject(value)) {
+    throw new BridgeError("invalid_request", "payload must be a plain object.");
+  }
+  const text = requireString(value.text, "payload.text");
+  if (new TextEncoder().encode(text).length > MAX_CLIPBOARD_TEXT_BYTES) {
+    throw new BridgeError("payload_too_large", "payload.text is too large.");
+  }
+  return { text };
+}
+
 function parseActionMessage(value: Record<string, unknown>): ActionMessage {
   const action = requireString(value.action, "action") as BridgeAction;
   if (!ACTIONS.includes(action)) {
@@ -186,6 +199,8 @@ function parseActionMessage(value: Record<string, unknown>): ActionMessage {
       return { ...base, action, payload: parseToastPayload(value.payload) };
     case "download":
       return { ...base, action, payload: parseDownloadPayload(value.payload) };
+    case "copyText":
+      return { ...base, action, payload: parseClipboardPayload(value.payload) };
   }
 }
 
