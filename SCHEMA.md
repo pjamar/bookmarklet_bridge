@@ -12,6 +12,7 @@ Bookmarklet authors are meant to think in terms of:
 runBookmarklet({
   name: "Example",
   version: 1,
+  extendedDescription: "## Summary\n\nShown in approval UI.",
   async run(bridge) {
     await bridge.get("https://example.com/api/me");
     await bridge.post("https://example.com/api/items", { hello: "world" });
@@ -52,7 +53,8 @@ Registration is sent before any privileged action can run.
   bookmarklet: {
     name: "Example",
     version: 1,
-    source: "async run(bridge) { ... }"
+    source: "async run(bridge) { ... }",
+    extendedDescription: "## Summary\n\nShown in approval UI."
   }
 }
 ```
@@ -61,6 +63,7 @@ Important points:
 
 - `executionId` is per execution, not per bookmarklet forever
 - `source` should be readable source, not only the minified bookmarklet URL
+- `extendedDescription` is optional Markdown shown in review UI
 - approval is checked at registration time
 
 ## Action Messages
@@ -208,6 +211,7 @@ Binary variant:
 - `bookmarklet.name` is required
 - `bookmarklet.version` is required
 - `bookmarklet.source` must be non-empty readable text
+- `bookmarklet.extendedDescription` is optional but must be non-empty if provided
 
 ### `get` Rules
 

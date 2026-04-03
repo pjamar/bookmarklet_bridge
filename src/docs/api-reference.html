@@ -210,6 +210,12 @@
           <pre><code>runBookmarklet({
   name: "Example",
   version: 1,
+  extendedDescription: `## What this does
+
+- Fetches profile data
+- Shows the result on the page
+
+Only allow this if you trust the code below.`,
   async run(bridge) {
     await bridge.toast("Running...");
     const result = await bridge.get("https://example.com/api/me");
@@ -239,6 +245,11 @@
                 <td><code>run</code></td>
                 <td>async function</td>
                 <td>Receives the <code>bridge</code> API after registration succeeds.</td>
+              </tr>
+              <tr>
+                <td><code>extendedDescription</code></td>
+                <td>string</td>
+                <td>Optional Markdown shown in approval and policy detail views.</td>
               </tr>
             </tbody>
           </table>
@@ -431,9 +442,11 @@
   bookmarklet: {
     name: "Example",
     version: 1,
-    source: "async run(bridge) { ... }"
+    source: "async run(bridge) { ... }",
+    extendedDescription: "## Summary\n\nShown in approval UI."
   }
 }</code></pre>
+          <p class="mini muted">The extended description is optional. It is rendered as Markdown in the allow / deny popup and in the management UI when inspecting approved or denied bookmarklets.</p>
         </section>
 
         <section class="section" id="responses">

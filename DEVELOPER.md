@@ -33,7 +33,7 @@ The extension owns approval, privileged work, and logging.
 
 ## Public Bookmarklet API
 
-### `runBookmarklet({ name, version, run })`
+### `runBookmarklet({ name, version, extendedDescription?, run })`
 
 This is the entry point.
 
@@ -43,13 +43,35 @@ Required fields:
 - `version`: integer version for the bookmarklet definition
 - `run`: async function that receives the `bridge`
 
+Optional fields:
+
+- `extendedDescription`: Markdown shown in approval and inspect views
+
 What it does conceptually:
 
 1. derives readable source
-2. registers the bookmarklet with the extension
+2. registers the bookmarklet and optional extended description with the extension
 3. waits for approval if needed
 4. creates the bridge object
 5. runs your bookmarklet code
+
+Example with an extended description:
+
+```js
+runBookmarklet({
+  name: "Example",
+  version: 1,
+  extendedDescription: `## What this does
+
+- Saves the current page
+- Copies the generated summary
+
+Review the generated Markdown before allowing it.`,
+  async run(bridge) {
+    await bridge.toast("Ready");
+  }
+});
+```
 
 What authors should not need to manage directly:
 
@@ -237,6 +259,8 @@ Approval identity is based on:
 - `name`
 - `version`
 - readable source
+
+The extended description is shown to the user during review, but it is not part of the identity hash by itself.
 
 That means you should treat a meaningful code change as a version-worthy change, because the extension will likely see it as a new definition anyway.
 

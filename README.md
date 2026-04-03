@@ -63,7 +63,7 @@ There are three runtime contexts:
 
 The normal flow is:
 
-1. a bookmarklet calls `runBookmarklet({ name, version, run })`
+1. a bookmarklet calls `runBookmarklet({ name, version, extendedDescription?, run })`
 2. the helper registers that bookmarklet with the extension
 3. the extension checks whether this bookmarklet identity was already allowed or denied
 4. if needed, the content script shows an approval modal on the current page
@@ -75,6 +75,9 @@ Approval is tied to bookmarklet identity derived from:
 - `name`
 - `version`
 - readable source derived from the bookmarklet
+
+Bookmarklets can also provide an optional extended Markdown description.
+That description is shown in the allow / deny popup and in the approved / denied detail view.
 
 If any of those change, the extension treats it as a new bookmarklet definition.
 

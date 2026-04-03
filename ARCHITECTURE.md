@@ -83,6 +83,8 @@ Registration happens once per bookmarklet execution.
 7. if allowed, the current execution session is registered
 8. the page helper continues and exposes the `bridge` methods to the bookmarklet
 
+If the bookmarklet includes an extended Markdown description, that text is shown alongside the readable source in approval and later inspection views.
+
 ### Actions
 
 After registration succeeds, the bookmarklet can issue actions.
