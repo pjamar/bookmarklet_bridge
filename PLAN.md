@@ -39,6 +39,7 @@ runBookmarklet({
     });
     await bridge.toast("Saved");
     await bridge.download({ filename: "memo.md", content: "Hello" });
+    await bridge.downloadUrl({ url: "https://example.com/file.pdf" });
     await bridge.copyText("Hello");
   }
 });
@@ -67,6 +68,7 @@ The current planned action set is intentionally small:
 - `get`
 - `toast`
 - `download`
+- `downloadUrl`
 - `copyText`
 
 Anything beyond that should have a strong reason, because increasing the action surface increases review and maintenance cost.

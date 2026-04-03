@@ -22,6 +22,7 @@ runBookmarklet({
     await bridge.post("https://example.com/api/items", { hello: "world" });
     await bridge.toast("Done");
     await bridge.download({ filename: "example.txt", content: "Saved" });
+    await bridge.downloadUrl({ url: "https://example.com/file.pdf" });
     await bridge.copyText("Copied");
   }
 });
@@ -98,7 +99,7 @@ await bridge.toast("Saved", {
 
 ### `bridge.download({ filename, content, mimeType? })`
 
-Use this to save generated text content through the browser download manager.
+Use this to save generated text or base64-decoded binary content through the browser download manager.
 
 Example:
 
@@ -112,9 +113,38 @@ await bridge.download({
 
 Important constraints:
 
-- `content` is text, not an arbitrary binary blob
+- provide exactly one of `content` or `bytesBase64`
 - filenames are sanitized before the browser sees them
 - large payloads are rejected
+
+Binary example:
+
+```js
+await bridge.download({
+  filename: "pixel.bin",
+  bytesBase64: "AQIDBA==",
+  mimeType: "application/octet-stream"
+});
+```
+
+### `bridge.downloadUrl({ url, filename? })`
+
+Use this to ask the browser to download a file directly from a URL.
+
+Example:
+
+```js
+await bridge.downloadUrl({
+  url: "https://example.com/files/report.pdf",
+  filename: "report.pdf"
+});
+```
+
+Important constraints:
+
+- `url` must be a full URL
+- `filename` is optional but sanitized if provided
+- allowed-origin settings still apply
 
 ### `bridge.copyText(text)`
 
@@ -174,6 +204,11 @@ runBookmarklet({
       filename: "memo-source.md",
       content,
       mimeType: "text/markdown"
+    });
+
+    await bridge.downloadUrl({
+      url: "https://example.com/files/reference.pdf",
+      filename: "reference.pdf"
     });
 
     await bridge.copyText(content);
@@ -239,6 +274,7 @@ If behavior seems surprising, check the options page before changing code.
 - keep network URLs explicit
 - send JSON-friendly payloads
 - keep downloads small and explicit
+- use `downloadUrl` when the file already exists remotely instead of piping it through the page
 - keep copied text deliberate and reviewable
 - use toast messages for visible feedback
 - bump the bookmarklet version when behavior changes materially

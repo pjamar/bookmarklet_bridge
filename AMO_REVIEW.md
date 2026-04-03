@@ -12,6 +12,7 @@ Bookmarklet Bridge lets a user run their own bookmarklets against the current pa
 - `bridge.post`
 - `bridge.toast`
 - `bridge.download`
+- `bridge.downloadUrl`
 - `bridge.copyText`
 
 The extension does not download or execute remote extension code. The bookmarklet source is supplied by the user through a bookmark they install themselves, and the extension shows approval UI before a new bookmarklet can use the bridge.
@@ -47,6 +48,7 @@ Approved bookmarklets can use a small helper API:
 - `bridge.post(url, body, options?)`
 - `bridge.toast(message, options?)`
 - `bridge.download({ filename, content, mimeType? })`
+- `bridge.downloadUrl({ url, filename? })`
 - `bridge.copyText(text)`
 
 The bridge also provides:
@@ -77,9 +79,9 @@ The broad permission is therefore about making the relay available on arbitrary 
 
 The extension can save user-generated bookmarklet output through the browser download manager.
 
-This permission is used only for the narrow `bridge.download` action:
+This permission is used only for the narrow download actions:
 
-- bookmarklets provide a filename and text content
+- bookmarklets either provide generated content or a remote URL
 - the extension asks the browser to create the download
 - the extension does not gain arbitrary filesystem access
 
@@ -116,7 +118,7 @@ the extension treats that as a new bookmarklet definition for approval purposes.
 
 ## Data Transmission
 
-The extension can transmit user-triggered bookmarklet data to remote endpoints through `bridge.get` and `bridge.post`, save user-triggered generated text through `bridge.download`, and copy user-triggered generated text through `bridge.copyText`.
+The extension can transmit user-triggered bookmarklet data to remote endpoints through `bridge.get` and `bridge.post`, save user-triggered generated or remote file downloads through `bridge.download` and `bridge.downloadUrl`, and copy user-triggered generated text through `bridge.copyText`.
 
 Typical transmitted data includes:
 

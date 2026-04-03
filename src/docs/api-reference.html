@@ -191,7 +191,7 @@
       <main>
         <section class="section hero" id="overview">
           <div class="signature">Bookmarklet Bridge API v2</div>
-          <p style="margin-top:14px;">Bookmarklet Bridge gives bookmarklets a small privileged API for cross-origin requests, page feedback, downloads, and clipboard writes.</p>
+          <p style="margin-top:14px;">Bookmarklet Bridge gives bookmarklets a small privileged API for cross-origin requests, page feedback, generated downloads, URL-based downloads, and clipboard writes.</p>
           <div class="grid two" style="margin-top:14px;">
             <div class="callout">
               <strong>What the helper hides</strong>
@@ -332,8 +332,8 @@
           </table>
           <p class="mini muted">Success result: <code>{ shown: true, payload: { message, variant, durationMs } }</code>.</p>
 
-          <h3 style="margin-top:18px;"><code>bridge.download({ filename, content, mimeType? })</code></h3>
-          <p>Saves generated text content through the browser download manager.</p>
+          <h3 style="margin-top:18px;"><code>bridge.download({ filename, content?, bytesBase64?, mimeType? })</code></h3>
+          <p>Saves generated text or base64-decoded binary content through the browser download manager.</p>
           <table>
             <thead>
               <tr>
@@ -351,7 +351,12 @@
               <tr>
                 <td><code>content</code></td>
                 <td>string</td>
-                <td>Required. Text only.</td>
+                <td>Optional. Generated text content.</td>
+              </tr>
+              <tr>
+                <td><code>bytesBase64</code></td>
+                <td>string</td>
+                <td>Optional. Base64-encoded binary bytes.</td>
               </tr>
               <tr>
                 <td><code>mimeType</code></td>
@@ -360,7 +365,32 @@
               </tr>
             </tbody>
           </table>
-          <p class="mini muted">Success result: <code>{ downloadId, filename, mimeType, sizeBytes }</code>.</p>
+          <p class="mini muted">Provide exactly one of <code>content</code> or <code>bytesBase64</code>. Success result: <code>{ downloadId, filename, mimeType, sizeBytes }</code>.</p>
+
+          <h3 style="margin-top:18px;"><code>bridge.downloadUrl({ url, filename? })</code></h3>
+          <p>Starts a browser-managed download directly from a URL.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>url</code></td>
+                <td>string</td>
+                <td>Required. Must be a full URL.</td>
+              </tr>
+              <tr>
+                <td><code>filename</code></td>
+                <td>string</td>
+                <td>Optional. Sanitized if provided.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="mini muted">Success result: <code>{ downloadId, url, filename? }</code>. Allowed-origin settings still apply.</p>
 
           <h3 style="margin-top:18px;"><code>bridge.copyText(text)</code></h3>
           <p>Copies generated text through the extension clipboard permission.</p>
@@ -470,7 +500,7 @@
             <li>GET requests cannot include a request body.</li>
             <li>POST bodies must be JSON-serializable.</li>
             <li>Header count is capped.</li>
-            <li>Download content is capped at 1 MiB.</li>
+            <li>Generated download content is capped at 1 MiB.</li>
             <li>Clipboard text is capped at 256 KiB.</li>
             <li>Logs intentionally avoid storing POST bodies, downloaded file contents, and clipboard text.</li>
           </ul>
@@ -490,13 +520,18 @@
       window.getSelection ? String(window.getSelection()).trim() : ""
     ].filter(Boolean).join("\n");
 
-    await bridge.copyText(summary);
-
     await bridge.download({
       filename: "page-summary.md",
       content: summary,
       mimeType: "text/markdown"
     });
+
+    await bridge.downloadUrl({
+      url: "https://example.com/files/reference.pdf",
+      filename: "reference.pdf"
+    });
+
+    await bridge.copyText(summary);
 
     await bridge.toast("Summary copied and saved", {
       variant: "success",

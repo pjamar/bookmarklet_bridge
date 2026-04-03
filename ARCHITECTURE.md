@@ -87,7 +87,7 @@ Registration happens once per bookmarklet execution.
 
 After registration succeeds, the bookmarklet can issue actions.
 
-1. the bookmarklet calls `bridge.get`, `bridge.post`, `bridge.toast`, `bridge.download`, or `bridge.copyText`
+1. the bookmarklet calls `bridge.get`, `bridge.post`, `bridge.toast`, `bridge.download`, `bridge.downloadUrl`, or `bridge.copyText`
 2. the helper sends an action message with the same `executionId`
 3. the content script relays the message
 4. the background script checks that the execution was registered
@@ -169,7 +169,7 @@ It:
 - parses bridge messages
 - distinguishes registration from actions
 - checks execution session state
-- dispatches `get`, `post`, `toast`, `download`, and `copyText`
+- dispatches `get`, `post`, `toast`, `download`, `downloadUrl`, and `copyText`
 - writes execution and error logs
 - handles internal messages from the options page
 
@@ -197,7 +197,8 @@ Current actions:
 - `get`
 - `post`
 - `toast` is routed in the background and rendered by the content script
-- `download` saves generated text through the browser download manager
+- `download` saves generated text or base64-decoded binary content through the browser download manager
+- `downloadUrl` asks the browser to download a file directly from a URL
 - `copyText` writes generated text to the clipboard through the extension permission
 
 ### `src/background/log/`

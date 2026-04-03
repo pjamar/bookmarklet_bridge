@@ -19,6 +19,7 @@ The extension provides a small helper model:
 - `bridge.post(url, body, options?)`
 - `bridge.toast(message, options?)`
 - `bridge.download({ filename, content, mimeType? })`
+- `bridge.downloadUrl({ url, filename? })`
 - `bridge.copyText(text)`
 
 This keeps bookmarklets readable and easy to audit while still enabling workflows that normal page JavaScript cannot reliably perform on arbitrary websites.
@@ -29,6 +30,7 @@ Typical use cases:
 - call an authenticated API from a bookmarklet
 - show lightweight status feedback on the current page
 - save generated Markdown, JSON, or CSV to a local file
+- download an existing remote file discovered by the bookmarklet
 - copy generated text or page data to the clipboard
 
 Each bookmarklet is explicitly run by the user and must be individually approved before it can use the bridge. Approval is tied to bookmarklet identity derived from its name, version, and readable source.
@@ -71,7 +73,7 @@ Used to store:
 
 ### `downloads`
 
-Used only for the `bridge.download(...)` action so a bookmarklet can save generated text content through the browser download manager.
+Used only for the `bridge.download(...)` and `bridge.downloadUrl(...)` actions so a bookmarklet can save generated content or trigger a browser-managed download from a remote URL.
 
 ### `clipboardWrite`
 

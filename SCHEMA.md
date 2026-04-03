@@ -17,6 +17,7 @@ runBookmarklet({
     await bridge.post("https://example.com/api/items", { hello: "world" });
     await bridge.toast("Done");
     await bridge.download({ filename: "example.txt", content: "Saved" });
+    await bridge.downloadUrl({ url: "https://example.com/file.pdf" });
     await bridge.copyText("Copied");
   }
 });
@@ -141,6 +142,41 @@ After registration succeeds, actions reuse the same `executionId`.
 }
 ```
 
+Binary variant:
+
+```js
+{
+  namespace: "bookmarklet-bridge",
+  version: 2,
+  kind: "action",
+  requestId: "unique-string",
+  executionId: "same-execution-id",
+  action: "download",
+  payload: {
+    filename: "pixel.bin",
+    bytesBase64: "AQIDBA==",
+    mimeType: "application/octet-stream"
+  }
+}
+```
+
+### `downloadUrl`
+
+```js
+{
+  namespace: "bookmarklet-bridge",
+  version: 2,
+  kind: "action",
+  requestId: "unique-string",
+  executionId: "same-execution-id",
+  action: "downloadUrl",
+  payload: {
+    url: "https://example.com/files/report.pdf",
+    filename: "report.pdf"
+  }
+}
+```
+
 ### `copyText`
 
 ```js
@@ -194,9 +230,15 @@ After registration succeeds, actions reuse the same `executionId`.
 ### `download` Rules
 
 - `payload.filename` must be non-empty text
-- `payload.content` must be non-empty text
+- exactly one of `payload.content` or `payload.bytesBase64` must be provided
 - `payload.mimeType` is optional
 - payload size is capped
+
+### `downloadUrl` Rules
+
+- `payload.url` must be a full URL
+- `payload.filename` is optional
+- allowed-origin settings still apply
 
 ### `copyText` Rules
 
@@ -261,7 +303,7 @@ During registration, the extension also derives review-oriented metadata:
 - `sourceHash`
 - `canonicalBookmarklet`
 - `decodedSource`
-- inferred actions such as `get`, `post`, `toast`, `download`, and `copyText`
+- inferred actions such as `get`, `post`, `toast`, `download`, `downloadUrl`, and `copyText`
 
 Important limitation:
 
