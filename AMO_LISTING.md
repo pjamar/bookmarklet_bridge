@@ -6,7 +6,7 @@ It is meant to support release work, reviewer communication, and store metadata.
 
 ## Summary
 
-Bookmarklet Bridge gives user-run bookmarklets a small, reviewable bridge for cross-origin `GET`, `POST`, in-page toast feedback, and browser-managed text downloads.
+Bookmarklet Bridge gives user-run bookmarklets a small, reviewable bridge for cross-origin `GET`, `POST`, in-page toast feedback, browser-managed text downloads, and extension-mediated clipboard copy.
 
 ## Description
 
@@ -19,6 +19,7 @@ The extension provides a small helper model:
 - `bridge.post(url, body, options?)`
 - `bridge.toast(message, options?)`
 - `bridge.download({ filename, content, mimeType? })`
+- `bridge.copyText(text)`
 
 This keeps bookmarklets readable and easy to audit while still enabling workflows that normal page JavaScript cannot reliably perform on arbitrary websites.
 
@@ -28,6 +29,7 @@ Typical use cases:
 - call an authenticated API from a bookmarklet
 - show lightweight status feedback on the current page
 - save generated Markdown, JSON, or CSV to a local file
+- copy generated text or page data to the clipboard
 
 Each bookmarklet is explicitly run by the user and must be individually approved before it can use the bridge. Approval is tied to bookmarklet identity derived from its name, version, and readable source.
 
@@ -71,6 +73,10 @@ Used to store:
 
 Used only for the `bridge.download(...)` action so a bookmarklet can save generated text content through the browser download manager.
 
+### `clipboardWrite`
+
+Used only for the `bridge.copyText(...)` action so a bookmarklet can copy generated text through the browser clipboard API.
+
 ## Privacy / Data Use
 
 Bookmarklet Bridge does not send telemetry to the developer.
@@ -85,7 +91,7 @@ Depending on the bookmarklet, transmitted data may include:
 - bookmarklet-generated request bodies
 - user-provided request headers, including authentication headers where relevant
 
-The extension stores local approval decisions and recent execution logs, but it intentionally does not store POST bodies or downloaded file contents in the log.
+The extension stores local approval decisions and recent execution logs, but it intentionally does not store POST bodies, downloaded file contents, or copied clipboard text in the log.
 
 ## Reviewer Notes Short Form
 
@@ -105,7 +111,7 @@ Suggested support text:
 
 ### Initial Release
 
-- Adds a Firefox bridge for bookmarklets that need cross-origin `GET`, `POST`, in-page toast feedback, and text-file downloads
+- Adds a Firefox bridge for bookmarklets that need cross-origin `GET`, `POST`, in-page toast feedback, text-file downloads, and clipboard copy
 - Includes per-bookmarklet approval, policy storage, and recent execution logging
 - Includes an options-page bookmarklet IDE and review tooling
 

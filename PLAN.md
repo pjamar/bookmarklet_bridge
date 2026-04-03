@@ -39,6 +39,7 @@ runBookmarklet({
     });
     await bridge.toast("Saved");
     await bridge.download({ filename: "memo.md", content: "Hello" });
+    await bridge.copyText("Hello");
   }
 });
 ```
@@ -66,6 +67,7 @@ The current planned action set is intentionally small:
 - `get`
 - `toast`
 - `download`
+- `copyText`
 
 Anything beyond that should have a strong reason, because increasing the action surface increases review and maintenance cost.
 
@@ -116,7 +118,7 @@ The log should help answer:
 - which URL was involved
 - whether it succeeded or failed
 
-The log should avoid becoming a data leak. In particular, POST bodies and downloaded file contents should not be stored.
+The log should avoid becoming a data leak. In particular, POST bodies, downloaded file contents, and copied clipboard text should not be stored.
 
 ## UX Expectations
 

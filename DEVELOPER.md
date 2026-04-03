@@ -22,6 +22,7 @@ runBookmarklet({
     await bridge.post("https://example.com/api/items", { hello: "world" });
     await bridge.toast("Done");
     await bridge.download({ filename: "example.txt", content: "Saved" });
+    await bridge.copyText("Copied");
   }
 });
 ```
@@ -115,6 +116,25 @@ Important constraints:
 - filenames are sanitized before the browser sees them
 - large payloads are rejected
 
+### `bridge.copyText(text)`
+
+Use this to copy generated text through the extension clipboard permission.
+
+Example:
+
+```js
+await bridge.copyText([
+  document.title || "Untitled",
+  location.href
+].join("\n"));
+```
+
+Important constraints:
+
+- this action writes text only
+- copied text is not retained in logs
+- large clipboard payloads are rejected
+
 ## Suggested Bookmarklet Style
 
 The bookmarklet should stay focused on:
@@ -155,6 +175,8 @@ runBookmarklet({
       content,
       mimeType: "text/markdown"
     });
+
+    await bridge.copyText(content);
 
     await bridge.toast("Memo added", {
       variant: "success",
@@ -216,6 +238,7 @@ If behavior seems surprising, check the options page before changing code.
 - keep network URLs explicit
 - send JSON-friendly payloads
 - keep downloads small and explicit
+- keep copied text deliberate and reviewable
 - use toast messages for visible feedback
 - bump the bookmarklet version when behavior changes materially
 

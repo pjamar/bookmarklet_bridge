@@ -60,7 +60,7 @@ That is why the extension keeps things like:
 - error code
 
 and intentionally avoids storing POST bodies.
-It also intentionally avoids storing downloaded file contents.
+It also intentionally avoids storing downloaded file contents or copied clipboard text.
 
 ## Packaging
 

@@ -17,6 +17,7 @@ runBookmarklet({
     await bridge.post("https://example.com/api/items", { hello: "world" });
     await bridge.toast("Done");
     await bridge.download({ filename: "example.txt", content: "Saved" });
+    await bridge.copyText("Copied");
   }
 });
 ```
@@ -140,6 +141,22 @@ After registration succeeds, actions reuse the same `executionId`.
 }
 ```
 
+### `copyText`
+
+```js
+{
+  namespace: "bookmarklet-bridge",
+  version: 2,
+  kind: "action",
+  requestId: "unique-string",
+  executionId: "same-execution-id",
+  action: "copyText",
+  payload: {
+    text: "Copied text"
+  }
+}
+```
+
 ## Validation Rules
 
 ### Common Rules
@@ -179,6 +196,11 @@ After registration succeeds, actions reuse the same `executionId`.
 - `payload.filename` must be non-empty text
 - `payload.content` must be non-empty text
 - `payload.mimeType` is optional
+- payload size is capped
+
+### `copyText` Rules
+
+- `payload.text` must be non-empty text
 - payload size is capped
 
 ## Response Shape
@@ -226,6 +248,7 @@ The current system can return codes such as:
 - `network_error`
 - `timeout`
 - `download_failed`
+- `clipboard_write_failed`
 - `bridge_internal_error`
 
 Not every code will appear in every path, but these are the meaningful categories for callers and logs.
@@ -238,7 +261,7 @@ During registration, the extension also derives review-oriented metadata:
 - `sourceHash`
 - `canonicalBookmarklet`
 - `decodedSource`
-- inferred actions such as `get`, `post`, `toast`, and `download`
+- inferred actions such as `get`, `post`, `toast`, `download`, and `copyText`
 
 Important limitation:
 
@@ -259,10 +282,11 @@ Entries may include:
 - target URL for network actions
 - toast text
 - downloaded filename, mime type, and size
+- clipboard write size
 - HTTP status
 - error code
 
-The design intentionally avoids logging POST bodies and download contents.
+The design intentionally avoids logging POST bodies, download contents, and copied clipboard text.
 
 ## Two Easy-To-Miss Implementation Details
 

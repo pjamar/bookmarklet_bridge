@@ -27,6 +27,7 @@ runBookmarklet({
     await bridge.post("https://example.com/api/items", { hello: "world" });
     await bridge.toast("Done");
     await bridge.download({ filename: "example.txt", content: "Saved" });
+    await bridge.copyText("Copied");
   }
 });
 ```
@@ -44,6 +45,7 @@ The generated bookmarklet helper currently handles:
 - `bridge.get`
 - `bridge.toast`
 - `bridge.download`
+- `bridge.copyText`
 - one registration step per execution
 - request / response correlation over `window.postMessage`
 
@@ -115,10 +117,11 @@ It records enough to understand behavior:
 - URL for `get` and `post`
 - toast text
 - downloaded filename and size
+- clipboard write size
 - HTTP status
 - error code
 
-It avoids storing POST bodies and download contents.
+It avoids storing POST bodies, download contents, and copied clipboard text.
 
 ### 5. Stored data evolves
 
@@ -149,8 +152,8 @@ These are the main end-to-end checks that matter after changes:
 - approve a bookmarklet and inspect it in the Approved view
 - deny a bookmarklet and inspect it in the Denied view
 - dismiss approval and confirm execution does not continue
-- run `toast`, `get`, `post`, and `download` examples
-- verify logs appear without POST body or download content data
+- run `toast`, `get`, `post`, `download`, and `copyText` examples
+- verify logs appear without POST body, download content, or clipboard text data
 - clear the log and verify it empties
 - re-run a generated bookmarklet on the same page and verify no redeclaration error occurs
 
