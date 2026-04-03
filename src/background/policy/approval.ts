@@ -5,6 +5,7 @@ import type {
   MessageSenderContext,
   PolicyEntry
 } from "../../shared/types";
+import { saveBookmarkletSettingsSchema } from "../bookmarklet-settings/store";
 import { getPolicy, touchPolicy, upsertPolicy } from "./store";
 import { registerExecutionSession, revokeExecutionSession } from "./session-store";
 
@@ -53,6 +54,7 @@ export async function applyApprovalDecision(
         }
       : policyEntry
   );
+  await saveBookmarkletSettingsSchema(identity.definitionHash, bookmarklet.settings);
 
   if (decision === "allow") {
     await registerExecutionSession(sender.tabId, identity.executionId, identity.definitionHash);

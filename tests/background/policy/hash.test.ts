@@ -6,10 +6,26 @@ describe("buildIdentity", () => {
     const first = await buildIdentity({
       name: "Example",
       version: 2,
-      source: "async function run(bridge) { await bridge.get('https://example.com'); }"
+      source: "async function run(bridge) { await bridge.get('https://example.com'); }",
+      settings: {
+        includeSelection: {
+          type: "boolean",
+          label: "Include selected text",
+          description: "Append the current selection to the request.",
+          default: true
+        }
+      }
     });
 
     const second = await buildIdentity({
+      settings: {
+        includeSelection: {
+          description: "Append the current selection to the request.",
+          default: true,
+          label: "Include selected text",
+          type: "boolean"
+        }
+      },
       source: "async function run(bridge) { await bridge.get('https://example.com'); }",
       version: 2,
       name: "Example"
@@ -17,6 +33,39 @@ describe("buildIdentity", () => {
 
     expect(first.canonicalBookmarklet).toBe(second.canonicalBookmarklet);
     expect(first.definitionHash).toBe(second.definitionHash);
+    expect(first.sourceHash).toBe(second.sourceHash);
+  });
+
+  test("changes definition hash when declared settings change", async () => {
+    const first = await buildIdentity({
+      name: "Example",
+      version: 2,
+      source: "async function run(bridge) { await bridge.getSettings(); }",
+      settings: {
+        timeoutSeconds: {
+          type: "integer",
+          label: "Timeout",
+          description: "Maximum wait time.",
+          default: 10
+        }
+      }
+    });
+
+    const second = await buildIdentity({
+      name: "Example",
+      version: 2,
+      source: "async function run(bridge) { await bridge.getSettings(); }",
+      settings: {
+        timeoutSeconds: {
+          type: "integer",
+          label: "Timeout",
+          description: "Maximum wait time.",
+          default: 15
+        }
+      }
+    });
+
+    expect(first.definitionHash).not.toBe(second.definitionHash);
     expect(first.sourceHash).toBe(second.sourceHash);
   });
 

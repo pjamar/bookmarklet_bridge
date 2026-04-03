@@ -22,7 +22,21 @@ describe("parseBridgeMessage", () => {
           name: "Example",
           version: 1,
           source: "async function run() {}",
-          extendedDescription: "## What it does\n\n- Saves text"
+          extendedDescription: "## What it does\n\n- Saves text",
+          settings: {
+            includeSelection: {
+              type: "boolean",
+              label: "Include selected text",
+              description: "Append the current selection to the exported note.",
+              default: true
+            },
+            notePrefix: {
+              type: "text",
+              label: "Prefix",
+              description: "Prepended to the captured note title.",
+              default: ""
+            }
+          }
         }
       })
     ).toEqual({
@@ -35,8 +49,73 @@ describe("parseBridgeMessage", () => {
         name: "Example",
         version: 1,
         source: "async function run() {}",
-        extendedDescription: "## What it does\n\n- Saves text"
+        extendedDescription: "## What it does\n\n- Saves text",
+        settings: {
+          includeSelection: {
+            type: "boolean",
+            label: "Include selected text",
+            description: "Append the current selection to the exported note.",
+            default: true
+          },
+          notePrefix: {
+            type: "text",
+            label: "Prefix",
+            description: "Prepended to the captured note title.",
+            default: ""
+          }
+        }
       }
+    });
+  });
+
+  test("rejects invalid bookmarklet settings defaults", () => {
+    expect(() =>
+      parseBridgeMessage({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "register",
+        requestId: "req-settings-invalid-default",
+        executionId: "exec-1",
+        bookmarklet: {
+          name: "Example",
+          version: 1,
+          source: "async function run() {}",
+          settings: {
+            timeoutSeconds: {
+              type: "integer",
+              label: "Timeout",
+              description: "Maximum wait time.",
+              default: 0,
+              min: 1
+            }
+          }
+        }
+      })
+    ).toThrowError(
+      new BridgeError(
+        "invalid_request",
+        "bookmarklet.settings.timeoutSeconds.default must be greater than or equal to bookmarklet.settings.timeoutSeconds.min."
+      )
+    );
+  });
+
+  test("accepts getSettings actions without payload", () => {
+    expect(
+      parseBridgeMessage({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: "req-get-settings",
+        executionId: "exec-1",
+        action: "getSettings"
+      })
+    ).toEqual({
+      namespace: BRIDGE_NAMESPACE,
+      version: BRIDGE_VERSION,
+      kind: "action",
+      requestId: "req-get-settings",
+      executionId: "exec-1",
+      action: "getSettings"
     });
   });
 

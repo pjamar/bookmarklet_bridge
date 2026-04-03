@@ -16,6 +16,12 @@ import { handleGet } from "./actions/get";
 import { handlePost } from "./actions/post";
 import { handleDownload, handleDownloadUrl } from "./actions/download";
 import { handleCopyText } from "./actions/clipboard";
+import {
+  getBookmarkletSettingsValues,
+  listBookmarkletSettingsSchemas,
+  listBookmarkletSettingsValues,
+  saveBookmarkletSettingsValues
+} from "./bookmarklet-settings/store";
 import { getSettings, saveSettings } from "./config/store";
 import { appendLog, clearLogs, listLogs } from "./log/store";
 import {
@@ -25,7 +31,7 @@ import {
   registerApprovedExecution
 } from "./policy/approval";
 import { buildIdentity } from "./policy/hash";
-import { deletePolicy, listPolicies, updatePolicyDecision } from "./policy/store";
+import { deletePolicy, getPolicy, listPolicies, updatePolicyDecision } from "./policy/store";
 import { getExecutionSession, hasExecutionSession } from "./policy/session-store";
 
 function createSuccessResponse(
@@ -147,6 +153,25 @@ async function executeAction(message: ActionMessage, sender: MessageSenderContex
       });
       return createSuccessResponse(message.requestId, result);
     }
+    case "getSettings": {
+      if (!session?.definitionHash) {
+        throw new BridgeError("bridge_internal_error", "Execution session is missing a definition hash.");
+      }
+      const schemaMap = await listBookmarkletSettingsSchemas();
+      const schema = schemaMap[session.definitionHash];
+      const result = schema ? await getBookmarkletSettingsValues(session.definitionHash) : {};
+      await appendLog({
+        id: `${message.requestId}:get-settings`,
+        timestamp: new Date().toISOString(),
+        executionId: message.executionId,
+        bookmarkletName: session?.bookmarkletName,
+        bookmarkletVersion: session?.bookmarkletVersion,
+        kind: "action",
+        outcome: "success",
+        action: "getSettings"
+      });
+      return createSuccessResponse(message.requestId, result ?? {});
+    }
     default:
       ensureNever(message);
   }
@@ -173,7 +198,8 @@ async function handleRegisterMessage(
         bookmarklet: {
           name: message.bookmarklet.name,
           version: message.bookmarklet.version,
-          extendedDescription: message.bookmarklet.extendedDescription
+          extendedDescription: message.bookmarklet.extendedDescription,
+          settings: message.bookmarklet.settings
         }
       }
     );
@@ -266,7 +292,9 @@ export async function handleInternalMessage(
       return {
         settings: await getSettings(),
         policies: await listPolicies(),
-        logs: await listLogs()
+        logs: await listLogs(),
+        bookmarkletSettingsSchemas: await listBookmarkletSettingsSchemas(),
+        bookmarkletSettingsValues: await listBookmarkletSettingsValues()
       };
     case "save_settings":
       return saveSettings(message.settings);
@@ -274,6 +302,11 @@ export async function handleInternalMessage(
       return updatePolicyDecision(message.definitionHash, message.decision);
     case "delete_policy":
       return deletePolicy(message.definitionHash);
+    case "save_bookmarklet_settings_values":
+      if ((await getPolicy(message.definitionHash))?.decision !== "allow") {
+        throw new BridgeError("invalid_request", "Bookmarklet settings can only be edited for approved policies.");
+      }
+      return saveBookmarkletSettingsValues(message.definitionHash, message.values);
     case "clear_logs":
       return clearLogs();
     default:
@@ -301,7 +334,8 @@ export async function wrapInternalMessage(
           kind: "action",
           outcome: "error",
           action: actionMessage.action,
-          url: "url" in actionMessage.payload ? actionMessage.payload.url : undefined,
+          url:
+            actionMessage.payload && "url" in actionMessage.payload ? actionMessage.payload.url : undefined,
           text: actionMessage.action === "toast" ? actionMessage.payload.message : undefined,
           filename:
             actionMessage.action === "download" || actionMessage.action === "downloadUrl"

@@ -8,6 +8,7 @@ import {
   MAX_HEADERS,
   TOAST_VARIANTS
 } from "./constants";
+import { parseBookmarkletSettingsSchema } from "./bookmarklet-settings";
 import { BridgeError } from "./errors";
 import type {
   ActionMessage,
@@ -98,7 +99,8 @@ function parseBookmarklet(value: unknown): BookmarkletRegistration {
     name: requireString(value.name, "bookmarklet.name"),
     version: requireNumber(value.version, "bookmarklet.version"),
     source: requireString(value.source, "bookmarklet.source"),
-    extendedDescription: extendedDescription as string | undefined
+    extendedDescription: extendedDescription as string | undefined,
+    settings: parseBookmarkletSettingsSchema(value.settings)
   };
 }
 
@@ -245,6 +247,11 @@ function parseActionMessage(value: Record<string, unknown>): ActionMessage {
       return { ...base, action, payload: parseDownloadUrlPayload(value.payload) };
     case "copyText":
       return { ...base, action, payload: parseClipboardPayload(value.payload) };
+    case "getSettings":
+      if (value.payload !== undefined) {
+        throw new BridgeError("invalid_request", "getSettings does not accept a payload.");
+      }
+      return { ...base, action };
   }
 }
 

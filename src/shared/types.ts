@@ -5,12 +5,68 @@ export type ToastVariant = (typeof TOAST_VARIANTS)[number];
 export type ApprovalDecision = (typeof APPROVAL_DECISIONS)[number];
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+export type BookmarkletSettingScalarValue = string | number | boolean;
+export type BookmarkletSettingType = "boolean" | "text" | "integer" | "float" | "option";
+
+interface BookmarkletSettingDefinitionBase {
+  type: BookmarkletSettingType;
+  label: string;
+  description: string;
+}
+
+export interface BookmarkletBooleanSettingDefinition extends BookmarkletSettingDefinitionBase {
+  type: "boolean";
+  default: boolean;
+}
+
+export interface BookmarkletTextSettingDefinition extends BookmarkletSettingDefinitionBase {
+  type: "text";
+  default: string;
+  placeholder?: string;
+  multiline?: boolean;
+  maxLength?: number;
+}
+
+export interface BookmarkletIntegerSettingDefinition extends BookmarkletSettingDefinitionBase {
+  type: "integer";
+  default: number;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export interface BookmarkletFloatSettingDefinition extends BookmarkletSettingDefinitionBase {
+  type: "float";
+  default: number;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export interface BookmarkletOptionSettingDefinition extends BookmarkletSettingDefinitionBase {
+  type: "option";
+  default: string;
+  options: string[];
+}
+
+export type BookmarkletSettingDefinition =
+  | BookmarkletBooleanSettingDefinition
+  | BookmarkletTextSettingDefinition
+  | BookmarkletIntegerSettingDefinition
+  | BookmarkletFloatSettingDefinition
+  | BookmarkletOptionSettingDefinition;
+
+export type BookmarkletSettingsSchema = Record<string, BookmarkletSettingDefinition>;
+export type BookmarkletSettingsValues = Record<string, BookmarkletSettingScalarValue>;
+export type BookmarkletSettingsSchemaMap = Record<string, BookmarkletSettingsSchema>;
+export type BookmarkletSettingsValueMap = Record<string, BookmarkletSettingsValues>;
 
 export interface BookmarkletRegistration {
   name: string;
   version: number;
   source: string;
   extendedDescription?: string;
+  settings?: BookmarkletSettingsSchema;
 }
 
 export interface RegisterMessage {
@@ -88,6 +144,11 @@ export interface ClipboardActionMessage extends ActionMessageBase {
   payload: ClipboardPayload;
 }
 
+export interface GetBookmarkletSettingsActionMessage extends ActionMessageBase {
+  action: "getSettings";
+  payload?: undefined;
+}
+
 export interface DownloadUrlActionMessage extends ActionMessageBase {
   action: "downloadUrl";
   payload: DownloadUrlPayload;
@@ -99,7 +160,8 @@ export type ActionMessage =
   | ToastActionMessage
   | DownloadActionMessage
   | DownloadUrlActionMessage
-  | ClipboardActionMessage;
+  | ClipboardActionMessage
+  | GetBookmarkletSettingsActionMessage;
 export type BridgeMessage = RegisterMessage | ActionMessage;
 
 export interface BridgeSuccessResponse {
@@ -186,6 +248,8 @@ export interface BridgeState {
   settings: BridgeSettings;
   policies: PolicyEntry[];
   logs: ExecutionLogEntry[];
+  bookmarkletSettingsSchemas: BookmarkletSettingsSchemaMap;
+  bookmarkletSettingsValues: BookmarkletSettingsValueMap;
 }
 
 export interface BridgeMessageEnvelope {
@@ -219,6 +283,12 @@ export interface DeletePolicyMessage {
   definitionHash: string;
 }
 
+export interface SaveBookmarkletSettingsValuesMessage {
+  kind: typeof INTERNAL_MESSAGE_KIND.SAVE_BOOKMARKLET_SETTINGS_VALUES;
+  definitionHash: string;
+  values: BookmarkletSettingsValues;
+}
+
 export interface ClearLogsMessage {
   kind: typeof INTERNAL_MESSAGE_KIND.CLEAR_LOGS;
 }
@@ -230,4 +300,5 @@ export type InternalMessage =
   | SaveSettingsMessage
   | SetPolicyDecisionMessage
   | DeletePolicyMessage
+  | SaveBookmarkletSettingsValuesMessage
   | ClearLogsMessage;

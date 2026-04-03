@@ -4,7 +4,7 @@ import type { BookmarkletRegistration, BridgeAction } from "../../shared/types";
 
 function inferActions(source: string): BridgeAction[] {
   const inferred: BridgeAction[] = [];
-  for (const action of ["post", "get", "toast", "download", "downloadUrl", "copyText"] as const) {
+  for (const action of ["post", "get", "toast", "download", "downloadUrl", "copyText", "getSettings"] as const) {
     const pattern = new RegExp(`\\bbridge\\.${action}\\b`);
     if (pattern.test(source)) {
       inferred.push(action);
@@ -17,7 +17,8 @@ export async function buildIdentity(bookmarklet: BookmarkletRegistration) {
   const canonicalBookmarklet = canonicalizeRecord({
     name: bookmarklet.name,
     version: bookmarklet.version,
-    source: bookmarklet.source
+    source: bookmarklet.source,
+    settings: bookmarklet.settings
   });
   const definitionHash = await sha256(canonicalBookmarklet);
   const decodedSource = bookmarklet.source;

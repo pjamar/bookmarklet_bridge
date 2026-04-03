@@ -1,5 +1,6 @@
 import { POLICIES_STORAGE_KEY } from "../../shared/constants";
 import type { PolicyEntry } from "../../shared/types";
+import { deleteBookmarkletSettings } from "../bookmarklet-settings/store";
 
 type PolicyMap = Record<string, PolicyEntry>;
 
@@ -31,7 +32,7 @@ export async function upsertPolicy(entry: PolicyEntry): Promise<void> {
 export async function deletePolicy(definitionHash: string): Promise<void> {
   const policyMap = await getPolicyMap();
   delete policyMap[definitionHash];
-  await savePolicyMap(policyMap);
+  await Promise.all([savePolicyMap(policyMap), deleteBookmarkletSettings(definitionHash)]);
 }
 
 export async function updatePolicyDecision(
