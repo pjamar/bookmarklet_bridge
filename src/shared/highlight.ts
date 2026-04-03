@@ -9,18 +9,18 @@ export const HIGHLIGHT_THEME = `
   .hljs {
     display: block;
     overflow-x: auto;
-    color: #1f1d17;
+    color: var(--code-ink, #1f1d17);
     background: transparent;
   }
   .hljs-comment,
   .hljs-quote {
-    color: #7e7567;
+    color: var(--code-comment, #7e7567);
     font-style: italic;
   }
   .hljs-keyword,
   .hljs-selector-tag,
   .hljs-subst {
-    color: #8b2e1e;
+    color: var(--code-keyword, #8b2e1e);
     font-weight: 700;
   }
   .hljs-number,
@@ -29,18 +29,18 @@ export const HIGHLIGHT_THEME = `
   .hljs-variable.language_,
   .hljs-template-variable,
   .hljs-tag .hljs-attr {
-    color: #7a4b00;
+    color: var(--code-number, #7a4b00);
   }
   .hljs-string,
   .hljs-doctag {
-    color: #116149;
+    color: var(--code-string, #116149);
   }
   .hljs-title,
   .hljs-title.function_,
   .hljs-function,
   .hljs-section,
   .hljs-selector-id {
-    color: #184e8a;
+    color: var(--code-function, #184e8a);
     font-weight: 700;
   }
   .hljs-property,
@@ -48,23 +48,23 @@ export const HIGHLIGHT_THEME = `
   .hljs-attribute,
   .hljs-name,
   .hljs-type {
-    color: #5f3dc4;
+    color: var(--code-property, #5f3dc4);
   }
   .hljs-punctuation,
   .hljs-operator {
-    color: #6a6258;
+    color: var(--code-punctuation, #6a6258);
   }
   .hljs-built_in,
   .hljs-bullet,
   .hljs-code,
   .hljs-addition {
-    color: #155e3a;
+    color: var(--code-built-in, #155e3a);
   }
   .hljs-deletion {
-    color: #922b21;
+    color: var(--code-deletion, #922b21);
   }
   .hljs-meta {
-    color: #5f4b32;
+    color: var(--code-meta, #5f4b32);
   }
 `;
 

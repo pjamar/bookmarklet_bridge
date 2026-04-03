@@ -39,10 +39,59 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
 
     const style = document.createElement("style");
     style.textContent = `
+      :host {
+        color-scheme: light dark;
+        --bg: #e9e7e2;
+        --paper: #f8f7f4;
+        --paper-strong: #fcfbf8;
+        --ink: #22211f;
+        --muted: #706b63;
+        --line: #c8c1b7;
+        --accent: #2e6664;
+        --accent-strong: #234d4c;
+        --danger: #a56a43;
+        --overlay: rgba(15, 19, 24, 0.48);
+        --code-ink: #23211e;
+        --code-comment: #7b756e;
+        --code-keyword: #9a5734;
+        --code-number: #8c6a2a;
+        --code-string: #2d6a66;
+        --code-function: #3b5f8e;
+        --code-property: #74608d;
+        --code-punctuation: #6f6962;
+        --code-built-in: #356a4d;
+        --code-deletion: #9b4f44;
+        --code-meta: #705f4d;
+      }
+      @media (prefers-color-scheme: dark) {
+        :host {
+          --bg: #1a1f24;
+          --paper: #20272d;
+          --paper-strong: #263038;
+          --ink: #e7e2db;
+          --muted: #ada69d;
+          --line: #3a474f;
+          --accent: #79a7a5;
+          --accent-strong: #9dc2c1;
+          --danger: #c48b63;
+          --overlay: rgba(4, 7, 11, 0.68);
+          --code-ink: #e7e2db;
+          --code-comment: #8e9a96;
+          --code-keyword: #d3976d;
+          --code-number: #d0b26b;
+          --code-string: #89c3bb;
+          --code-function: #93b5dd;
+          --code-property: #b4a0d1;
+          --code-punctuation: #9b958d;
+          --code-built-in: #8dc09d;
+          --code-deletion: #d6887a;
+          --code-meta: #b79c7f;
+        }
+      }
       .overlay {
         position: fixed;
         inset: 0;
-        background: rgba(10, 12, 18, 0.46);
+        background: var(--overlay);
         z-index: 2147483647;
         display: grid;
         place-items: center;
@@ -52,9 +101,9 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
         width: min(880px, calc(100vw - 32px));
         max-height: calc(100vh - 32px);
         overflow: auto;
-        background: #f7f2e8;
-        color: #1b1b1b;
-        border: 1px solid #cabaa3;
+        background: var(--paper);
+        color: var(--ink);
+        border: 1px solid var(--line);
         border-radius: 16px;
         box-shadow: 0 24px 60px rgba(0,0,0,0.3);
         padding: 20px;
@@ -63,16 +112,16 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
       .label { font-weight: 700; }
       .chips { display: flex; flex-wrap: wrap; gap: 8px; }
       .chip {
-        border: 1px solid #cabaa3;
+        border: 1px solid var(--line);
         border-radius: 999px;
         padding: 3px 8px;
-        background: #fffdf8;
+        background: var(--paper-strong);
       }
       pre {
         white-space: pre-wrap;
         overflow-wrap: anywhere;
-        background: #fffdf8;
-        border: 1px solid #d8ccb9;
+        background: var(--paper-strong);
+        border: 1px solid var(--line);
         border-radius: 10px;
         padding: 12px;
       }
@@ -86,16 +135,16 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
         padding: 10px 14px;
         cursor: pointer;
         font: inherit;
-        background: #1f4b3f;
+        background: var(--accent);
         color: white;
       }
-      button[data-decision="deny"] { background: #7b2d26; }
+      button[data-decision="deny"] { background: var(--danger); }
       .markdown {
         margin: 0 0 16px;
         padding: 12px 14px;
-        border: 1px solid #d8ccb9;
+        border: 1px solid var(--line);
         border-radius: 10px;
-        background: #fffdf8;
+        background: var(--paper-strong);
       }
       .markdown :is(h1, h2, h3) { margin: 0 0 10px; }
       .markdown p { margin: 0 0 10px; }
@@ -103,13 +152,13 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
       .markdown blockquote {
         margin: 0 0 10px;
         padding-left: 12px;
-        border-left: 3px solid #cabaa3;
-        color: #4d473f;
+        border-left: 3px solid var(--line);
+        color: var(--muted);
       }
       .markdown pre {
         margin: 0 0 10px;
       }
-      .markdown a { color: #1f4b74; }
+      .markdown a { color: var(--accent-strong); }
       ${HIGHLIGHT_THEME}
     `;
 
