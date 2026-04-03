@@ -216,7 +216,16 @@
 - Shows the result on the page
 
 Only allow this if you trust the code below.`,
+  settings: {
+    includeSelection: {
+      type: "boolean",
+      label: "Include selection",
+      description: "Append the current selection to the payload.",
+      default: true
+    }
+  },
   async run(bridge) {
+    const settings = await bridge.getSettings();
     await bridge.toast("Running...");
     const result = await bridge.get("https://example.com/api/me");
     console.log(result);
@@ -247,6 +256,11 @@ Only allow this if you trust the code below.`,
                 <td>Receives the <code>bridge</code> API after registration succeeds.</td>
               </tr>
               <tr>
+                <td><code>settings</code></td>
+                <td>object</td>
+                <td>Optional declared bookmarklet-scoped settings schema shown in approval and editable in the approved detail view.</td>
+              </tr>
+              <tr>
                 <td><code>extendedDescription</code></td>
                 <td>string</td>
                 <td>Optional Markdown shown in approval and policy detail views.</td>
@@ -257,6 +271,10 @@ Only allow this if you trust the code below.`,
 
         <section class="section" id="actions">
           <h2>Actions</h2>
+
+          <h3><code>bridge.getSettings()</code></h3>
+          <p>Read the current bookmarklet-scoped settings for this exact approved definition.</p>
+          <p class="mini muted">Success result: an object containing the validated current values merged with declared defaults.</p>
 
           <h3><code>bridge.get(url, options?)</code></h3>
           <p>Cross-origin GET request executed by the extension.</p>

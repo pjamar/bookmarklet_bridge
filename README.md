@@ -63,11 +63,11 @@ There are three runtime contexts:
 
 The normal flow is:
 
-1. a bookmarklet calls `runBookmarklet({ name, version, extendedDescription?, run })`
+1. a bookmarklet calls `runBookmarklet({ name, version, extendedDescription?, settings?, run })`
 2. the helper registers that bookmarklet with the extension
 3. the extension checks whether this bookmarklet identity was already allowed or denied
 4. if needed, the content script shows an approval modal on the current page
-5. once approved, the bookmarklet can call `bridge.get`, `bridge.post`, `bridge.toast`, `bridge.download`, `bridge.downloadUrl`, and `bridge.copyText`
+5. once approved, the bookmarklet can call `bridge.getSettings`, `bridge.get`, `bridge.post`, `bridge.toast`, `bridge.download`, `bridge.downloadUrl`, and `bridge.copyText`
 6. the background script validates the action, executes it, and records a safe log entry
 
 Approval is tied to bookmarklet identity derived from:
@@ -76,8 +76,9 @@ Approval is tied to bookmarklet identity derived from:
 - `version`
 - readable source derived from the bookmarklet
 
-Bookmarklets can also provide an optional extended Markdown description.
+Bookmarklets can also provide an optional extended Markdown description and an optional declared settings schema.
 That description is shown in the allow / deny popup and in the approved / denied detail view.
+Declared settings are shown in approval, editable in the approved detail view, and are scoped to the exact bookmarklet definition hash.
 
 If any of those change, the extension treats it as a new bookmarklet definition.
 

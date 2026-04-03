@@ -1,7 +1,13 @@
 import { APPROVAL_DECISIONS, APPROVAL_HOST_ID, INTERNAL_MESSAGE_KIND } from "../shared/constants";
 import { HIGHLIGHT_THEME, highlightIntoElement } from "../shared/highlight";
 import { renderMarkdown } from "../shared/markdown";
-import type { ApprovalDecision, BridgeResponse, RegisterMessage } from "../shared/types";
+import type {
+  ApprovalDecision,
+  BookmarkletSettingDefinition,
+  BookmarkletSettingsSchema,
+  BridgeResponse,
+  RegisterMessage
+} from "../shared/types";
 
 interface ApprovalPromptInput {
   message: RegisterMessage;
@@ -124,6 +130,12 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
       descriptionBlock.innerHTML = renderMarkdown(extendedDescription);
     }
 
+    const settingsSchema = isSettingsSchema(bookmarklet.settings) ? bookmarklet.settings : undefined;
+    const settingsBlock =
+      settingsSchema && Object.keys(settingsSchema).length > 0
+        ? createSettingsBlock(settingsSchema)
+        : null;
+
     const meta = document.createElement("div");
     meta.className = "meta";
     appendMetaRow(meta, "Name", String(bookmarklet.name ?? input.message.bookmarklet.name));
@@ -161,6 +173,9 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
     panel.append(heading, intro);
     if (descriptionBlock) {
       panel.append(descriptionBlock);
+    }
+    if (settingsBlock) {
+      panel.append(settingsBlock);
     }
     panel.append(meta, sourceLabel, pre, actions);
 
@@ -222,4 +237,58 @@ function createChip(value: string): HTMLElement {
   chip.className = "chip";
   chip.textContent = value;
   return chip;
+}
+
+function isSettingsSchema(value: unknown): value is BookmarkletSettingsSchema {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function createSettingsBlock(schema: BookmarkletSettingsSchema): HTMLElement {
+  const block = document.createElement("section");
+  block.className = "markdown";
+
+  const heading = document.createElement("h2");
+  heading.textContent = "Declared Settings";
+  block.append(heading);
+
+  const intro = document.createElement("p");
+  intro.textContent = "This bookmarklet declares user-visible settings. Defaults below are what it can read through bridge.getSettings().";
+  block.append(intro);
+
+  for (const [key, definition] of Object.entries(schema)) {
+    block.append(createSettingCard(key, definition));
+  }
+
+  return block;
+}
+
+function createSettingCard(key: string, definition: BookmarkletSettingDefinition): HTMLElement {
+  const card = document.createElement("div");
+  card.style.marginBottom = "12px";
+  card.style.padding = "12px 14px";
+  card.style.border = "1px solid #d8ccb9";
+  card.style.borderRadius = "10px";
+  card.style.background = "#fffdf8";
+
+  const title = document.createElement("p");
+  title.innerHTML = `<strong>${escapeHtml(definition.label)}</strong> <code>${escapeHtml(key)}</code>`;
+
+  const details = document.createElement("p");
+  details.textContent = `${definition.description} Type: ${definition.type}. Default: ${formatSettingValue(definition.default)}.`;
+
+  card.append(title, details);
+  if (definition.type === "option") {
+    const options = document.createElement("p");
+    options.textContent = `Options: ${definition.options.join(", ")}`;
+    card.append(options);
+  }
+  return card;
+}
+
+function formatSettingValue(value: string | number | boolean): string {
+  return typeof value === "string" ? `"${value}"` : String(value);
+}
+
+function escapeHtml(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }

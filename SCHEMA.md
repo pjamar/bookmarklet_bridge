@@ -13,7 +13,16 @@ runBookmarklet({
   name: "Example",
   version: 1,
   extendedDescription: "## Summary\n\nShown in approval UI.",
+  settings: {
+    includeSelection: {
+      type: "boolean",
+      label: "Include selection",
+      description: "Append the current selection to the payload.",
+      default: true
+    }
+  },
   async run(bridge) {
+    const settings = await bridge.getSettings();
     await bridge.get("https://example.com/api/me");
     await bridge.post("https://example.com/api/items", { hello: "world" });
     await bridge.toast("Done");
@@ -54,7 +63,15 @@ Registration is sent before any privileged action can run.
     name: "Example",
     version: 1,
     source: "async run(bridge) { ... }",
-    extendedDescription: "## Summary\n\nShown in approval UI."
+    extendedDescription: "## Summary\n\nShown in approval UI.",
+    settings: {
+      includeSelection: {
+        type: "boolean",
+        label: "Include selection",
+        description: "Append the current selection to the payload.",
+        default: true
+      }
+    }
   }
 }
 ```
@@ -64,6 +81,7 @@ Important points:
 - `executionId` is per execution, not per bookmarklet forever
 - `source` should be readable source, not only the minified bookmarklet URL
 - `extendedDescription` is optional Markdown shown in review UI
+- `settings` is optional declared bookmarklet-scoped settings metadata
 - approval is checked at registration time
 
 ## Action Messages
@@ -108,6 +126,21 @@ After registration succeeds, actions reuse the same `executionId`.
   }
 }
 ```
+
+### `getSettings`
+
+```js
+{
+  namespace: "bookmarklet-bridge",
+  version: 2,
+  kind: "action",
+  requestId: "unique-string",
+  executionId: "same-execution-id",
+  action: "getSettings"
+}
+```
+
+This returns the current bookmarklet-scoped settings for the exact approved definition, normalized against defaults.
 
 ### `toast`
 

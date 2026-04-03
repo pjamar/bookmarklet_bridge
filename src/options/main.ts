@@ -1,7 +1,16 @@
 import { INTERNAL_MESSAGE_KIND } from "../shared/constants";
 import { HIGHLIGHT_THEME, highlightIntoElement } from "../shared/highlight";
 import { renderMarkdown } from "../shared/markdown";
-import type { BridgeSettings, BridgeState, ExecutionLogEntry, PolicyEntry } from "../shared/types";
+import type {
+  BookmarkletSettingDefinition,
+  BookmarkletSettingScalarValue,
+  BookmarkletSettingsSchema,
+  BookmarkletSettingsValues,
+  BridgeSettings,
+  BridgeState,
+  ExecutionLogEntry,
+  PolicyEntry
+} from "../shared/types";
 
 type ViewName = "settings" | "approved" | "denied" | "log" | "generator";
 type GeneratorSnippet = "toast" | "get" | "post" | "download" | "downloadUrl" | "copyText" | "tryCatch";
@@ -27,7 +36,9 @@ let state: BridgeState = {
     requestDefaults: { timeoutMs: 10000 }
   },
   policies: [],
-  logs: []
+  logs: [],
+  bookmarkletSettingsSchemas: {},
+  bookmarkletSettingsValues: {}
 };
 let currentView: ViewName = "settings";
 let selectedPolicyHash: string | null = null;
@@ -58,7 +69,9 @@ async function loadState(): Promise<void> {
   state = {
     settings: loaded.settings ?? state.settings,
     policies: loaded.policies ?? [],
-    logs: loaded.logs ?? []
+    logs: loaded.logs ?? [],
+    bookmarkletSettingsSchemas: loaded.bookmarkletSettingsSchemas ?? {},
+    bookmarkletSettingsValues: loaded.bookmarkletSettingsValues ?? {}
   };
 }
 
@@ -97,7 +110,7 @@ function render(): void {
 function createFragmentFromHtml(markup: string): DocumentFragment {
   const parsed = new DOMParser().parseFromString(markup, "text/html");
   const fragment = document.createDocumentFragment();
-  fragment.append(...parsed.body.childNodes);
+  fragment.append(...Array.from(parsed.body.childNodes));
   return fragment;
 }
 
@@ -199,6 +212,7 @@ function renderPolicyList(decision: "allow" | "deny", title: string): string {
 }
 
 function renderPolicyDetail(policy: PolicyEntry): string {
+  const settingsSection = renderPolicySettingsSection(policy);
   return `
     <section class="panel">
       <div class="row" style="justify-content:space-between;">
@@ -241,7 +255,93 @@ function renderPolicyDetail(policy: PolicyEntry): string {
       <h3>Canonical Bookmarklet</h3>
       <pre><code data-highlight="json">${escapeHtml(policy.canonicalBookmarklet)}</code></pre>
     </section>
+    ${settingsSection}
   `;
+}
+
+function renderPolicySettingsSection(policy: PolicyEntry): string {
+  const schema = state.bookmarkletSettingsSchemas[policy.definitionHash];
+  if (policy.decision !== "allow" || !schema || Object.keys(schema).length === 0) {
+    return "";
+  }
+
+  const values = state.bookmarkletSettingsValues[policy.definitionHash] ?? {};
+  return `
+    <section class="panel">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div>
+          <h3>Bookmarklet Settings</h3>
+          <p class="muted">These values are scoped to this exact definition hash and are visible to the bookmarklet through <code>bridge.getSettings()</code>.</p>
+        </div>
+        <div class="row">
+          <button class="button inline" data-reset-all-settings="${escapeAttr(policy.definitionHash)}">Reset All</button>
+          <button class="button inline" data-save-policy-settings="${escapeAttr(policy.definitionHash)}">Save Settings</button>
+        </div>
+      </div>
+      <div class="grid">
+        ${Object.entries(schema)
+          .map(([key, definition]) => renderPolicySettingField(policy.definitionHash, key, definition, values[key]))
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderPolicySettingField(
+  definitionHash: string,
+  key: string,
+  definition: BookmarkletSettingDefinition,
+  currentValue: BookmarkletSettingScalarValue | undefined
+): string {
+  const current = currentValue ?? definition.default;
+  const inputId = `setting-${definitionHash}-${key}`;
+  const control = renderPolicySettingControl(inputId, definitionHash, key, definition, current);
+  return `
+    <div class="list-item">
+      <div class="row" style="justify-content:space-between; align-items:flex-start; gap:16px;">
+        <div>
+          <strong>${escapeHtml(definition.label)}</strong>
+          <div class="muted">${escapeHtml(definition.description)}</div>
+          <div class="muted">Key: <code>${escapeHtml(key)}</code> • Type: <code>${escapeHtml(definition.type)}</code></div>
+          <div class="muted">Default: <code>${escapeHtml(formatSettingValue(definition.default))}</code></div>
+        </div>
+        <button class="button inline" data-reset-setting="${escapeAttr(key)}" data-definition-hash="${escapeAttr(definitionHash)}">Reset</button>
+      </div>
+      <label for="${escapeAttr(inputId)}" style="display:block; margin-top:12px;">
+        <div>Current Value</div>
+        ${control}
+      </label>
+    </div>
+  `;
+}
+
+function renderPolicySettingControl(
+  inputId: string,
+  definitionHash: string,
+  key: string,
+  definition: BookmarkletSettingDefinition,
+  currentValue: BookmarkletSettingScalarValue
+): string {
+  const sharedAttributes = `id="${escapeAttr(inputId)}" data-setting-input="${escapeAttr(key)}" data-definition-hash="${escapeAttr(definitionHash)}" data-setting-type="${escapeAttr(definition.type)}"`;
+  switch (definition.type) {
+    case "boolean":
+      return `<input ${sharedAttributes} type="checkbox" ${currentValue === true ? "checked" : ""} />`;
+    case "text":
+      return definition.multiline
+        ? `<textarea ${sharedAttributes} ${definition.maxLength !== undefined ? `maxlength="${definition.maxLength}"` : ""} placeholder="${escapeAttr(definition.placeholder ?? "")}">${escapeHtml(String(currentValue))}</textarea>`
+        : `<input ${sharedAttributes} type="text" value="${escapeAttr(String(currentValue))}" ${definition.maxLength !== undefined ? `maxlength="${definition.maxLength}"` : ""} placeholder="${escapeAttr(definition.placeholder ?? "")}" />`;
+    case "integer":
+      return `<input ${sharedAttributes} type="number" value="${escapeAttr(String(currentValue))}" ${renderNumericInputAttributes(definition.min, definition.max, definition.step)} step="${definition.step ?? 1}" />`;
+    case "float":
+      return `<input ${sharedAttributes} type="number" value="${escapeAttr(String(currentValue))}" ${renderNumericInputAttributes(definition.min, definition.max, definition.step)} />`;
+    case "option":
+      return `<select ${sharedAttributes}>${definition.options
+        .map(
+          (option) =>
+            `<option value="${escapeAttr(option)}" ${option === currentValue ? "selected" : ""}>${escapeHtml(option)}</option>`
+        )
+        .join("")}</select>`;
+  }
 }
 
 function renderGenerator(): string {
@@ -288,6 +388,12 @@ function renderGenerator(): string {
     <section class="panel">
       <h3>Bridge Actions</h3>
       <div class="doc-grid">
+        ${renderGeneratorActionDoc(
+          "bridge.getSettings()",
+          "Read the current bookmarklet-scoped settings for this exact approved definition. Returned values are merged with defaults and are read-only in V1.",
+          `const settings = await bridge.getSettings();
+console.log(settings);`
+        )}
         ${renderGeneratorActionDoc(
           "bridge.post(url, body, options?)",
           "Send JSON to a cross-origin endpoint through the extension. The request body must be JSON-serializable.",
@@ -462,6 +568,105 @@ function renderChips(values: string[] | undefined): string {
   return normalized.map((value) => `<span class="chip">${escapeHtml(value)}</span>`).join("");
 }
 
+function renderNumericInputAttributes(
+  min: number | undefined,
+  max: number | undefined,
+  step: number | undefined
+): string {
+  return [min !== undefined ? `min="${min}"` : "", max !== undefined ? `max="${max}"` : "", step !== undefined ? `step="${step}"` : ""]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function formatSettingValue(value: BookmarkletSettingScalarValue): string {
+  return typeof value === "string" ? value : String(value);
+}
+
+function getPolicySettingsSchema(definitionHash: string): BookmarkletSettingsSchema | undefined {
+  return state.bookmarkletSettingsSchemas[definitionHash];
+}
+
+function collectPolicySettingsValues(definitionHash: string): BookmarkletSettingsValues | null {
+  const schema = getPolicySettingsSchema(definitionHash);
+  if (!schema) {
+    return null;
+  }
+
+  const values: BookmarkletSettingsValues = {};
+  for (const [key, definition] of Object.entries(schema)) {
+    const input = document.querySelector<HTMLElement>(
+      `[data-setting-input="${CSS.escape(key)}"][data-definition-hash="${CSS.escape(definitionHash)}"]`
+    );
+    if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement)) {
+      values[key] = definition.default;
+      continue;
+    }
+
+    switch (definition.type) {
+      case "boolean":
+        values[key] = input instanceof HTMLInputElement ? input.checked : Boolean(input.textContent);
+        break;
+      case "text":
+        values[key] = input.value;
+        break;
+      case "integer": {
+        const parsed = Number(input.value);
+        values[key] = Number.isFinite(parsed) ? Math.trunc(parsed) : definition.default;
+        break;
+      }
+      case "float": {
+        const parsed = Number(input.value);
+        values[key] = Number.isFinite(parsed) ? parsed : definition.default;
+        break;
+      }
+      case "option":
+        values[key] = input.value;
+        break;
+    }
+  }
+
+  return values;
+}
+
+function resetPolicySettingControl(definitionHash: string, key: string, definition: BookmarkletSettingDefinition): void {
+  const input = document.querySelector<HTMLElement>(
+    `[data-setting-input="${CSS.escape(key)}"][data-definition-hash="${CSS.escape(definitionHash)}"]`
+  );
+  if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement)) {
+    return;
+  }
+
+  switch (definition.type) {
+    case "boolean":
+      if (input instanceof HTMLInputElement) {
+        input.checked = definition.default;
+      }
+      break;
+    case "text":
+      input.value = definition.default;
+      break;
+    case "integer":
+    case "float":
+    case "option":
+      input.value = String(definition.default);
+      break;
+  }
+}
+
+async function savePolicySettings(definitionHash: string): Promise<void> {
+  const values = collectPolicySettingsValues(definitionHash);
+  if (!values) {
+    return;
+  }
+
+  await browser.runtime.sendMessage({
+    kind: INTERNAL_MESSAGE_KIND.SAVE_BOOKMARKLET_SETTINGS_VALUES,
+    definitionHash,
+    values
+  });
+  await refresh();
+}
+
 function bindEvents(): void {
   document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -533,6 +738,42 @@ function bindEvents(): void {
     });
   });
 
+  document.querySelectorAll<HTMLButtonElement>("[data-save-policy-settings]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (button.dataset.savePolicySettings) {
+        await savePolicySettings(button.dataset.savePolicySettings);
+      }
+    });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>("[data-reset-setting]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const definitionHash = button.dataset.definitionHash;
+      const key = button.dataset.resetSetting;
+      const schema = definitionHash ? getPolicySettingsSchema(definitionHash) : undefined;
+      const definition = key && schema ? schema[key] : undefined;
+      if (!definitionHash || !key || !definition) {
+        return;
+      }
+      resetPolicySettingControl(definitionHash, key, definition);
+      await savePolicySettings(definitionHash);
+    });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>("[data-reset-all-settings]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const definitionHash = button.dataset.resetAllSettings;
+      const schema = definitionHash ? getPolicySettingsSchema(definitionHash) : undefined;
+      if (!definitionHash || !schema) {
+        return;
+      }
+      for (const [key, definition] of Object.entries(schema)) {
+        resetPolicySettingControl(definitionHash, key, definition);
+      }
+      await savePolicySettings(definitionHash);
+    });
+  });
+
   bindGeneratorEvents();
 }
 
@@ -571,7 +812,7 @@ function bridgeSend(message) {
   });
 }
 
-async function runBookmarklet({ name, version, extendedDescription, run }) {
+async function runBookmarklet({ name, version, extendedDescription, settings, run }) {
   const executionId = crypto.randomUUID ? crypto.randomUUID() : "execution-" + String(Date.now());
   await bridgeSend({
     namespace: BRIDGE_NAMESPACE,
@@ -583,7 +824,8 @@ async function runBookmarklet({ name, version, extendedDescription, run }) {
       name,
       version,
       source: run.toString(),
-      extendedDescription
+      extendedDescription,
+      settings
     }
   });
 
@@ -673,6 +915,16 @@ async function runBookmarklet({ name, version, extendedDescription, run }) {
         payload: {
           text
         }
+      });
+    },
+    getSettings() {
+      return bridgeSend({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-get-settings",
+        executionId,
+        action: "getSettings"
       });
     }
   };
