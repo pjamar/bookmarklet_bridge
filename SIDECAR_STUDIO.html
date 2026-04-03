@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connector Studio</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe4;
+        --panel: rgba(255, 251, 244, 0.88);
+        --panel-strong: rgba(255, 248, 238, 0.96);
+        --line: rgba(79, 58, 37, 0.18);
+        --ink: #201912;
+        --muted: #6a5b4d;
+        --accent: #1f5c4b;
+        --accent-strong: #123a30;
+        --accent-alt: #9c4d25;
+        --accent-soft: #ebe2d4;
+        --shadow: 0 24px 60px rgba(53, 39, 23, 0.12);
+        --code: #f8f3eb;
+        --good: #2a6c56;
+        --warn: #9c4d25;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { min-height: 100%; }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(255, 255, 255, 0.78), transparent 26%),
+          radial-gradient(circle at 85% 10%, rgba(206, 137, 74, 0.12), transparent 24%),
+          linear-gradient(180deg, #efe7d7 0%, var(--bg) 100%);
+        font: 15px/1.55 Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+      }
+
+      body::before,
+      body::after {
+        content: "";
+        position: fixed;
+        inset: auto;
+        z-index: -1;
+        width: 38vw;
+        height: 38vw;
+        border-radius: 999px;
+        filter: blur(30px);
+        opacity: 0.28;
+        pointer-events: none;
+      }
+
+      body::before {
+        top: -12vw;
+        left: -10vw;
+        background: rgba(31, 92, 75, 0.14);
+      }
+
+      body::after {
+        right: -10vw;
+        bottom: -12vw;
+        background: rgba(156, 77, 37, 0.12);
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      code,
+      pre,
+      .mono {
+        font: 13px/1.55 "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+      }
+
+      .shell {
+        max-width: 1560px;
+        margin: 0 auto;
+        padding: 28px 24px 40px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.85fr);
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .hero-card,
+      .card {
+        position: relative;
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px);
+      }
+
+      .hero-card {
+        overflow: hidden;
+        padding: 28px;
+      }
+
+      .hero-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(130deg, rgba(31, 92, 75, 0.08), transparent 45%),
+          linear-gradient(310deg, rgba(156, 77, 37, 0.08), transparent 42%);
+        pointer-events: none;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 11px;
+        border-radius: 999px;
+        border: 1px solid rgba(31, 92, 75, 0.24);
+        color: var(--accent);
+        background: rgba(255, 255, 255, 0.56);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        font-family: "Avenir Next Condensed", "Franklin Gothic Medium", "Arial Narrow", sans-serif;
+        line-height: 1.05;
+        letter-spacing: 0.01em;
+      }
+
+      h1 {
+        margin-top: 14px;
+        font-size: clamp(2.8rem, 6vw, 4.9rem);
+      }
+
+      h2 {
+        font-size: 1.8rem;
+      }
+
+      h3 {
+        font-size: 1.12rem;
+      }
+
+      .hero-copy {
+        max-width: 780px;
+      }
+
+      .hero-copy p {
+        margin: 14px 0 0;
+        max-width: 68ch;
+        color: var(--muted);
+        font-size: 1.03rem;
+      }
+
+      .hero-stats {
+        display: grid;
+        gap: 12px;
+        align-content: start;
+      }
+
+      .stat {
+        padding: 18px 18px 16px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: var(--panel-strong);
+      }
+
+      .stat strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 1.5rem;
+        font-family: "Avenir Next Condensed", "Franklin Gothic Medium", "Arial Narrow", sans-serif;
+      }
+
+      .stat span {
+        color: var(--muted);
+        font-size: 0.94rem;
+      }
+
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .tab-button {
+        border: 1px solid var(--line);
+        background: rgba(255, 252, 247, 0.76);
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 11px 16px;
+        cursor: pointer;
+        transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+      }
+
+      .tab-button:hover,
+      .tab-button:focus-visible {
+        transform: translateY(-1px);
+        border-color: rgba(31, 92, 75, 0.35);
+        background: #fffdf9;
+        outline: none;
+      }
+
+      .tab-button.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff9f2;
+      }
+
+      .tab-panels {
+        display: grid;
+      }
+
+      .tab-panel {
+        display: none;
+      }
+
+      .tab-panel.active {
+        display: block;
+        animation: rise 180ms ease;
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .editor-layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
+        gap: 18px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      .card-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .card-header p,
+      .section-note,
+      .muted {
+        margin: 6px 0 0;
+        color: var(--muted);
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      label {
+        display: grid;
+        gap: 7px;
+        color: var(--muted);
+      }
+
+      .field-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: baseline;
+        font-size: 0.95rem;
+      }
+
+      .field-label small {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        border-radius: 16px;
+        border: 1px solid rgba(89, 67, 46, 0.18);
+        background: rgba(255, 253, 249, 0.9);
+        color: var(--ink);
+        padding: 12px 14px;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 120px;
+      }
+
+      .editor {
+        min-height: 420px;
+      }
+
+      .settings-editor {
+        min-height: 164px;
+      }
+
+      .preview {
+        min-height: 250px;
+        overflow: auto;
+        white-space: pre;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--code);
+      }
+
+      .toolbar,
+      .toolbar-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .button {
+        appearance: none;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 11px 15px;
+        cursor: pointer;
+        background: var(--accent);
+        color: #fff9f2;
+        transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+        box-shadow: 0 10px 24px rgba(31, 92, 75, 0.18);
+      }
+
+      .button:hover,
+      .button:focus-visible {
+        transform: translateY(-1px);
+        outline: none;
+      }
+
+      .button.secondary {
+        background: rgba(255, 252, 248, 0.92);
+        color: var(--ink);
+        border-color: var(--line);
+        box-shadow: none;
+      }
+
+      .button.warn {
+        background: var(--accent-alt);
+        box-shadow: 0 10px 24px rgba(156, 77, 37, 0.18);
+      }
+
+      .button.ghost {
+        background: transparent;
+        color: var(--ink);
+        border-color: var(--line);
+        box-shadow: none;
+      }
+
+      .status {
+        margin-top: 10px;
+        min-height: 1.4em;
+        color: var(--muted);
+      }
+
+      .status.good {
+        color: var(--good);
+      }
+
+      .status.warn {
+        color: var(--warn);
+      }
+
+      .library-layout {
+        display: grid;
+        grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+        gap: 18px;
+      }
+
+      .script-list {
+        display: grid;
+        gap: 10px;
+        max-height: 720px;
+        overflow: auto;
+      }
+
+      .script-item {
+        width: 100%;
+        text-align: left;
+        padding: 15px 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 253, 249, 0.88);
+        cursor: pointer;
+      }
+
+      .script-item.active {
+        border-color: rgba(31, 92, 75, 0.4);
+        background: rgba(233, 245, 240, 0.95);
+      }
+
+      .script-item strong {
+        display: block;
+        color: var(--ink);
+        font-size: 1rem;
+      }
+
+      .script-item span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        font-size: 0.83rem;
+      }
+
+      .docs-layout {
+        display: grid;
+        gap: 18px;
+      }
+
+      .doc-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .doc-card {
+        padding: 18px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .doc-card p,
+      .doc-card ul {
+        color: var(--muted);
+      }
+
+      .doc-card ul {
+        margin: 10px 0 0;
+        padding-left: 18px;
+      }
+
+      .dropzone {
+        border: 1px dashed rgba(31, 92, 75, 0.4);
+        background: rgba(244, 249, 247, 0.72);
+        border-radius: 18px;
+        padding: 16px;
+      }
+
+      .split-preview {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      a.inline-link {
+        color: var(--accent);
+      }
+
+      @media (max-width: 1120px) {
+        .hero,
+        .editor-layout,
+        .library-layout,
+        .doc-grid,
+        .split-preview {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          padding: 18px 14px 28px;
+        }
+
+        .hero-card,
+        .card {
+          border-radius: 22px;
+          padding: 18px;
+        }
+
+        .grid.two {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: clamp(2.2rem, 13vw, 3.4rem);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <section class="hero">
+        <div class="hero-card">
+          <div class="badge">Standalone Studio</div>
+          <div class="hero-copy">
+            <h1>Connector Studio</h1>
+            <p>
+              Edit, version, import, export, and document bookmarklet sidecar or connector scripts in one self-contained page.
+              Nothing here depends on the extension runtime.
+            </p>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="stat">
+            <span>Current Workspace</span>
+            <strong id="heroScriptName">Starter Connector</strong>
+          </div>
+          <div class="stat">
+            <span>Saved Locally</span>
+            <strong id="heroScriptCount">1</strong>
+          </div>
+          <div class="stat">
+            <span>Export Format</span>
+            <strong>JSON or JS</strong>
+          </div>
+        </div>
+      </section>
+
+      <nav class="tabs" aria-label="Studio sections">
+        <button class="tab-button active" data-tab="editor">Editor</button>
+        <button class="tab-button" data-tab="library">Library</button>
+        <button class="tab-button" data-tab="docs">Docs</button>
+      </nav>
+
+      <div class="tab-panels">
+        <section class="tab-panel active" data-panel="editor">
+          <div class="editor-layout">
+            <div class="stack">
+              <article class="card">
+                <div class="card-header">
+                  <div>
+                    <h2>Script Metadata</h2>
+                    <p>Define the saved script record and the generated connector bundle.</p>
+                  </div>
+                </div>
+                <div class="grid">
+                  <div class="grid two">
+                    <label>
+                      <span class="field-label"><span>Name</span><small>Visible title</small></span>
+                      <input id="scriptName" type="text" />
+                    </label>
+                    <label>
+                      <span class="field-label"><span>Version</span><small>Integer</small></span>
+                      <input id="scriptVersion" type="number" min="1" step="1" />
+                    </label>
+                  </div>
+                  <label>
+                    <span class="field-label"><span>Extended Description</span><small>Markdown-friendly text</small></span>
+                    <textarea id="scriptDescription"></textarea>
+                  </label>
+                  <label>
+                    <span class="field-label"><span>Settings Schema JSON</span><small>Optional</small></span>
+                    <textarea id="scriptSettings" class="settings-editor mono" spellcheck="false"></textarea>
+                  </label>
+                </div>
+              </article>
+
+              <article class="card">
+                <div class="card-header">
+                  <div>
+                    <h2>Editor Actions</h2>
+                    <p>Save locally, duplicate the current script, or export the current bundle immediately.</p>
+                  </div>
+                </div>
+                <div class="toolbar-wrap">
+                  <button class="button" id="saveScript">Save Script</button>
+                  <button class="button secondary" id="newScript">New Script</button>
+                  <button class="button secondary" id="duplicateScript">Duplicate</button>
+                  <button class="button secondary" id="copyBundle">Copy Bundle</button>
+                  <button class="button secondary" id="copyJson">Copy JSON</button>
+                  <button class="button secondary" id="downloadJs">Download JS</button>
+                  <button class="button warn" id="deleteScript">Delete</button>
+                </div>
+                <div id="editorStatus" class="status" aria-live="polite"></div>
+              </article>
+            </div>
+
+            <div class="stack">
+              <article class="card">
+                <div class="card-header">
+                  <div>
+                    <h2>Connector Source</h2>
+                    <p>Edit the runtime body directly. The generated preview below wraps this into a reusable connector object.</p>
+                  </div>
+                  <div class="pill-row">
+                    <span class="pill">Local autosync</span>
+                    <span class="pill">Self contained</span>
+                  </div>
+                </div>
+                <label>
+                  <span class="field-label"><span>run(bridge) body</span><small>Plain JavaScript</small></span>
+                  <textarea id="scriptBody" class="editor mono" spellcheck="false"></textarea>
+                </label>
+                <div class="toolbar-wrap" style="margin-top: 12px;">
+                  <button class="button secondary" data-snippet="getSettings">Insert getSettings</button>
+                  <button class="button secondary" data-snippet="toast">Insert toast</button>
+                  <button class="button secondary" data-snippet="get">Insert GET</button>
+                  <button class="button secondary" data-snippet="post">Insert POST</button>
+                  <button class="button secondary" data-snippet="download">Insert download</button>
+                  <button class="button secondary" data-snippet="copyText">Insert copyText</button>
+                  <button class="button secondary" data-snippet="tryCatch">Insert try/catch</button>
+                </div>
+              </article>
+
+              <article class="card">
+                <div class="card-header">
+                  <div>
+                    <h2>Generated Output</h2>
+                    <p>Use this as the current self-contained connector bundle preview or export target.</p>
+                  </div>
+                  <div class="pill-row">
+                    <span class="pill" id="bundleMeta">Bundle ready</span>
+                  </div>
+                </div>
+                <div class="split-preview">
+                  <div>
+                    <p class="section-note">Readable run source</p>
+                    <pre id="runPreview" class="preview mono"></pre>
+                  </div>
+                  <div>
+                    <p class="section-note">Full connector bundle</p>
+                    <pre id="bundlePreview" class="preview mono"></pre>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="library">
+          <div class="library-layout">
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>Saved Scripts</h2>
+                  <p>These are stored in your browser local storage on this machine only.</p>
+                </div>
+              </div>
+              <div class="toolbar" style="margin-bottom: 14px;">
+                <button class="button secondary" id="importJsonButton">Import JSON</button>
+                <button class="button secondary" id="exportAllButton">Export All</button>
+                <button class="button secondary" id="resetSampleButton">Restore Sample</button>
+              </div>
+              <input id="importFile" type="file" accept=".json,application/json" hidden />
+              <div class="dropzone">
+                <strong>Import format</strong>
+                <p class="muted">
+                  Import either a single script record or a full workspace export. Existing scripts are kept unless the imported file uses the same script IDs.
+                </p>
+              </div>
+              <div id="scriptList" class="script-list" style="margin-top: 14px;"></div>
+            </article>
+
+            <div class="stack">
+              <article class="card">
+                <div class="card-header">
+                  <div>
+                    <h2>Selected Script Summary</h2>
+                    <p>Quick metadata for the script currently open in the editor.</p>
+                  </div>
+                </div>
+                <div class="grid two">
+                  <div>
+                    <p class="section-note">Name</p>
+                    <div id="summaryName"></div>
+                  </div>
+                  <div>
+                    <p class="section-note">Version</p>
+                    <div id="summaryVersion"></div>
+                  </div>
+                  <div>
+                    <p class="section-note">Settings Keys</p>
+                    <div id="summarySettings"></div>
+                  </div>
+                  <div>
+                    <p class="section-note">Source Lines</p>
+                    <div id="summaryLines"></div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="card">
+                <div class="card-header">
+                  <div>
+                    <h2>Export Targets</h2>
+                    <p>Download or copy the current script in the format you need for handoff or archival.</p>
+                  </div>
+                </div>
+                <div class="toolbar-wrap">
+                  <button class="button" id="exportCurrentJson">Download Current JSON</button>
+                  <button class="button secondary" id="exportCurrentJs">Download Current JS</button>
+                  <button class="button secondary" id="copyCurrentJson">Copy Current JSON</button>
+                  <button class="button secondary" id="copyCurrentJs">Copy Current JS</button>
+                </div>
+                <div id="libraryStatus" class="status" aria-live="polite"></div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="docs">
+          <div class="docs-layout">
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>How To Use This Page</h2>
+                  <p>This page is a portable editing workspace for the JavaScript connector or sidecar layer, not a replacement for the extension approval flow.</p>
+                </div>
+              </div>
+              <div class="doc-grid">
+                <div class="doc-card">
+                  <h3>Editor</h3>
+                  <p>Write the script body, description, and optional settings schema. Save it locally, then export either the JSON record or the assembled JavaScript bundle.</p>
+                </div>
+                <div class="doc-card">
+                  <h3>Library</h3>
+                  <p>Maintain multiple variants, import older exports, duplicate experiments, and hand off bundles without requiring the extension on the editing machine.</p>
+                </div>
+                <div class="doc-card">
+                  <h3>Settings Schema</h3>
+                  <p>The schema field is plain JSON. Keep it aligned with the declared bookmarklet settings model if the script will later be used with Bookmarklet Bridge.</p>
+                </div>
+                <div class="doc-card">
+                  <h3>Generated Bundle</h3>
+                  <p>The bundle preview is a readable self-contained object with `name`, `version`, `extendedDescription`, `settings`, and `run` so it is easy to audit before export.</p>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>Recommended Script Shape</h2>
+                  <p>Use this object shape when you want a connector definition that can later be adapted into the extension helper model.</p>
+                </div>
+              </div>
+              <pre class="preview mono" style="min-height: 0;">{
+  name: "Example Connector",
+  version: 1,
+  extendedDescription: "Short explanation of what this script does.",
+  settings: {
+    includeSelection: {
+      type: "boolean",
+      label: "Include selection",
+      description: "Append current selection to the outgoing payload.",
+      default: true
+    }
+  },
+  async run(bridge) {
+    const settings = await bridge.getSettings();
+    await bridge.toast("Running connector");
+    return settings;
+  }
+}</pre>
+            </article>
+
+            <article class="card">
+              <div class="card-header">
+                <div>
+                  <h2>Useful Notes</h2>
+                </div>
+              </div>
+              <div class="doc-grid">
+                <div class="doc-card">
+                  <h3>Import Format</h3>
+                  <ul>
+                    <li>A single script import can be one object with `id`, `name`, `version`, `extendedDescription`, `settingsText`, and `runBody`.</li>
+                    <li>A full workspace import can be `{ scripts: [...] }`.</li>
+                  </ul>
+                </div>
+                <div class="doc-card">
+                  <h3>Export Strategy</h3>
+                  <ul>
+                    <li>Use JSON when you want the editable record.</li>
+                    <li>Use JS when you want a readable handoff bundle.</li>
+                    <li>Keep versions explicit so diffs and approvals stay understandable later.</li>
+                  </ul>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "bookmarklet-bridge.connector-studio.v1";
+
+      const defaultScript = {
+        id: createId(),
+        name: "Starter Connector",
+        version: 1,
+        extendedDescription: "Portable workspace starter for connector-side JavaScript.",
+        settingsText: JSON.stringify(
+          {
+            includeSelection: {
+              type: "boolean",
+              label: "Include selection",
+              description: "Append the current selection to the outgoing request.",
+              default: true
+            }
+          },
+          null,
+          2
+        ),
+        runBody: `const selection = window.getSelection ? String(window.getSelection()).trim() : "";
+const settings = await bridge.getSettings();
+
+await bridge.toast("Connector running", { variant: "info" });
+
+if (selection && settings.includeSelection) {
+  console.log({ selection, url: location.href });
+}`
+      };
+
+      const state = loadState();
+
+      const elements = {
+        tabs: Array.from(document.querySelectorAll("[data-tab]")),
+        panels: Array.from(document.querySelectorAll("[data-panel]")),
+        scriptName: document.getElementById("scriptName"),
+        scriptVersion: document.getElementById("scriptVersion"),
+        scriptDescription: document.getElementById("scriptDescription"),
+        scriptSettings: document.getElementById("scriptSettings"),
+        scriptBody: document.getElementById("scriptBody"),
+        runPreview: document.getElementById("runPreview"),
+        bundlePreview: document.getElementById("bundlePreview"),
+        bundleMeta: document.getElementById("bundleMeta"),
+        heroScriptName: document.getElementById("heroScriptName"),
+        heroScriptCount: document.getElementById("heroScriptCount"),
+        editorStatus: document.getElementById("editorStatus"),
+        libraryStatus: document.getElementById("libraryStatus"),
+        scriptList: document.getElementById("scriptList"),
+        summaryName: document.getElementById("summaryName"),
+        summaryVersion: document.getElementById("summaryVersion"),
+        summarySettings: document.getElementById("summarySettings"),
+        summaryLines: document.getElementById("summaryLines"),
+        importFile: document.getElementById("importFile")
+      };
+
+      bind();
+      render();
+
+      function bind() {
+        elements.tabs.forEach((button) => {
+          button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+        });
+
+        ["scriptName", "scriptVersion", "scriptDescription", "scriptSettings", "scriptBody"].forEach((key) => {
+          elements[key].addEventListener("input", syncCurrentScriptFromDom);
+        });
+
+        document.getElementById("saveScript").addEventListener("click", () => {
+          syncCurrentScriptFromDom();
+          persist("Saved current script.");
+        });
+
+        document.getElementById("newScript").addEventListener("click", () => {
+          syncCurrentScriptFromDom();
+          const next = createBlankScript();
+          state.scripts.unshift(next);
+          state.selectedId = next.id;
+          persist("Created a new script draft.");
+          render();
+        });
+
+        document.getElementById("duplicateScript").addEventListener("click", () => {
+          syncCurrentScriptFromDom();
+          const current = getCurrentScript();
+          const duplicate = {
+            ...current,
+            id: createId(),
+            name: `${current.name} Copy`
+          };
+          state.scripts.unshift(duplicate);
+          state.selectedId = duplicate.id;
+          persist("Duplicated the current script.");
+          render();
+        });
+
+        document.getElementById("deleteScript").addEventListener("click", () => {
+          if (state.scripts.length === 1) {
+            showStatus(elements.editorStatus, "Keep at least one script in the workspace.", "warn");
+            return;
+          }
+          const current = getCurrentScript();
+          state.scripts = state.scripts.filter((script) => script.id !== current.id);
+          state.selectedId = state.scripts[0].id;
+          persist("Deleted the selected script.");
+          render();
+        });
+
+        document.getElementById("copyBundle").addEventListener("click", async () => {
+          await copyText(buildBundleSource(getCurrentScript()));
+          showStatus(elements.editorStatus, "Copied generated bundle.", "good");
+        });
+
+        document.getElementById("copyJson").addEventListener("click", async () => {
+          await copyText(JSON.stringify(getCurrentScript(), null, 2));
+          showStatus(elements.editorStatus, "Copied editable script JSON.", "good");
+        });
+
+        document.getElementById("downloadJs").addEventListener("click", () => {
+          downloadText(`${slugify(getCurrentScript().name)}.js`, buildBundleSource(getCurrentScript()));
+          showStatus(elements.editorStatus, "Downloaded current bundle as JavaScript.", "good");
+        });
+
+        document.querySelectorAll("[data-snippet]").forEach((button) => {
+          button.addEventListener("click", () => insertSnippet(button.dataset.snippet));
+        });
+
+        document.getElementById("importJsonButton").addEventListener("click", () => {
+          elements.importFile.click();
+        });
+
+        elements.importFile.addEventListener("change", async (event) => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) {
+            return;
+          }
+          const text = await file.text();
+          importJsonText(text);
+          elements.importFile.value = "";
+        });
+
+        document.getElementById("exportAllButton").addEventListener("click", () => {
+          downloadText(
+            "connector-studio-workspace.json",
+            JSON.stringify({ exportedAt: new Date().toISOString(), scripts: state.scripts }, null, 2)
+          );
+          showStatus(elements.libraryStatus, "Downloaded full workspace export.", "good");
+        });
+
+        document.getElementById("resetSampleButton").addEventListener("click", () => {
+          state.scripts = [structuredClone(defaultScript)];
+          state.selectedId = state.scripts[0].id;
+          persist("Restored the sample workspace.");
+          render();
+        });
+
+        document.getElementById("exportCurrentJson").addEventListener("click", () => {
+          const current = getCurrentScript();
+          downloadText(`${slugify(current.name)}.json`, JSON.stringify(current, null, 2));
+          showStatus(elements.libraryStatus, "Downloaded current script JSON.", "good");
+        });
+
+        document.getElementById("exportCurrentJs").addEventListener("click", () => {
+          const current = getCurrentScript();
+          downloadText(`${slugify(current.name)}.js`, buildBundleSource(current));
+          showStatus(elements.libraryStatus, "Downloaded current script bundle.", "good");
+        });
+
+        document.getElementById("copyCurrentJson").addEventListener("click", async () => {
+          await copyText(JSON.stringify(getCurrentScript(), null, 2));
+          showStatus(elements.libraryStatus, "Copied current script JSON.", "good");
+        });
+
+        document.getElementById("copyCurrentJs").addEventListener("click", async () => {
+          await copyText(buildBundleSource(getCurrentScript()));
+          showStatus(elements.libraryStatus, "Copied current script bundle.", "good");
+        });
+      }
+
+      function setActiveTab(tabName) {
+        elements.tabs.forEach((button) => {
+          button.classList.toggle("active", button.dataset.tab === tabName);
+        });
+        elements.panels.forEach((panel) => {
+          panel.classList.toggle("active", panel.dataset.panel === tabName);
+        });
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            return {
+              scripts: [structuredClone(defaultScript)],
+              selectedId: defaultScript.id
+            };
+          }
+          const parsed = JSON.parse(raw);
+          const scripts = Array.isArray(parsed.scripts)
+            ? parsed.scripts.map(normalizeScript).filter(Boolean)
+            : [];
+          if (scripts.length === 0) {
+            return {
+              scripts: [structuredClone(defaultScript)],
+              selectedId: defaultScript.id
+            };
+          }
+          const selectedId = scripts.some((script) => script.id === parsed.selectedId)
+            ? parsed.selectedId
+            : scripts[0].id;
+          return { scripts, selectedId };
+        } catch {
+          return {
+            scripts: [structuredClone(defaultScript)],
+            selectedId: defaultScript.id
+          };
+        }
+      }
+
+      function persist(message) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (message) {
+          showStatus(elements.editorStatus, message, "good");
+        }
+      }
+
+      function normalizeScript(value) {
+        if (!value || typeof value !== "object") {
+          return null;
+        }
+        return {
+          id: typeof value.id === "string" && value.id ? value.id : createId(),
+          name: typeof value.name === "string" && value.name.trim() ? value.name : "Untitled Connector",
+          version:
+            typeof value.version === "number" && Number.isFinite(value.version) && value.version > 0
+              ? Math.floor(value.version)
+              : 1,
+          extendedDescription:
+            typeof value.extendedDescription === "string" ? value.extendedDescription : "",
+          settingsText:
+            typeof value.settingsText === "string"
+              ? value.settingsText
+              : value.settings && typeof value.settings === "object"
+                ? JSON.stringify(value.settings, null, 2)
+                : "{}",
+          runBody: typeof value.runBody === "string" && value.runBody ? value.runBody : ""
+        };
+      }
+
+      function createBlankScript() {
+        return {
+          id: createId(),
+          name: "Untitled Connector",
+          version: 1,
+          extendedDescription: "",
+          settingsText: "{}",
+          runBody: ""
+        };
+      }
+
+      function getCurrentScript() {
+        return state.scripts.find((script) => script.id === state.selectedId) || state.scripts[0];
+      }
+
+      function syncCurrentScriptFromDom() {
+        const current = getCurrentScript();
+        current.name = elements.scriptName.value.trim() || "Untitled Connector";
+        current.version = normalizeVersion(elements.scriptVersion.value);
+        current.extendedDescription = elements.scriptDescription.value;
+        current.settingsText = elements.scriptSettings.value.trim() || "{}";
+        current.runBody = elements.scriptBody.value;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        renderOutputOnly();
+      }
+
+      function render() {
+        renderForm();
+        renderOutputOnly();
+        renderLibrary();
+      }
+
+      function renderForm() {
+        const current = getCurrentScript();
+        elements.scriptName.value = current.name;
+        elements.scriptVersion.value = String(current.version);
+        elements.scriptDescription.value = current.extendedDescription;
+        elements.scriptSettings.value = current.settingsText;
+        elements.scriptBody.value = current.runBody;
+      }
+
+      function renderOutputOnly() {
+        const current = getCurrentScript();
+        const settingsInfo = parseSettings(current.settingsText);
+        const runSource = buildRunSource(current.runBody);
+        const bundleSource = buildBundleSource(current);
+
+        elements.runPreview.textContent = runSource;
+        elements.bundlePreview.textContent = bundleSource;
+        elements.bundleMeta.textContent = settingsInfo.ok ? "Bundle ready" : "Settings JSON needs attention";
+        elements.heroScriptName.textContent = current.name;
+        elements.heroScriptCount.textContent = String(state.scripts.length);
+        elements.summaryName.textContent = current.name;
+        elements.summaryVersion.textContent = String(current.version);
+        elements.summarySettings.textContent = settingsInfo.keys.length > 0 ? settingsInfo.keys.join(", ") : "None";
+        elements.summaryLines.textContent = String((current.runBody || "").split("\n").length);
+        if (!settingsInfo.ok) {
+          showStatus(elements.editorStatus, settingsInfo.message, "warn");
+        }
+      }
+
+      function renderLibrary() {
+        const current = getCurrentScript();
+        elements.scriptList.replaceChildren(
+          ...state.scripts.map((script) => {
+            const button = document.createElement("button");
+            button.className = `script-item${script.id === current.id ? " active" : ""}`;
+            button.type = "button";
+            button.innerHTML = `<strong>${escapeHtml(script.name)}</strong><span>v${script.version} • ${escapeHtml(script.runBody ? "has source" : "empty source")}</span>`;
+            button.addEventListener("click", () => {
+              syncCurrentScriptFromDom();
+              state.selectedId = script.id;
+              render();
+            });
+            return button;
+          })
+        );
+      }
+
+      function buildRunSource(runBody) {
+        return `async run(bridge) {\n${indentBlock(runBody || "", 2)}\n}`;
+      }
+
+      function buildBundleSource(script) {
+        const settingsInfo = parseSettings(script.settingsText);
+        const settingsLiteral = settingsInfo.ok ? JSON.stringify(settingsInfo.value, null, 2) : "{}";
+        return `(function (root, factory) {\n  const connector = factory();\n  if (typeof module !== "undefined" && module.exports) {\n    module.exports = connector;\n    return;\n  }\n  root.connector = connector;\n})(typeof globalThis !== "undefined" ? globalThis : window, function () {\n  return {\n    name: ${JSON.stringify(script.name)},\n    version: ${script.version},\n    extendedDescription: ${JSON.stringify(script.extendedDescription)},\n    settings: ${indentBlock(settingsLiteral, 4).trimStart()},\n    ${buildRunSource(script.runBody).replaceAll("\n", "\n    ")}\n  };\n});`;
+      }
+
+      function parseSettings(text) {
+        try {
+          const trimmed = text.trim() || "{}";
+          const value = JSON.parse(trimmed);
+          if (!value || typeof value !== "object" || Array.isArray(value)) {
+            return {
+              ok: false,
+              message: "Settings schema must be a JSON object.",
+              value: {},
+              keys: []
+            };
+          }
+          return {
+            ok: true,
+            message: "",
+            value,
+            keys: Object.keys(value)
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            message: error instanceof Error ? `Invalid settings JSON: ${error.message}` : "Invalid settings JSON.",
+            value: {},
+            keys: []
+          };
+        }
+      }
+
+      function indentBlock(value, spaces) {
+        const prefix = " ".repeat(spaces);
+        const normalized = String(value || "");
+        return normalized
+          .split("\n")
+          .map((line) => (line ? `${prefix}${line}` : line))
+          .join("\n");
+      }
+
+      function insertSnippet(name) {
+        const snippets = {
+          getSettings: `const settings = await bridge.getSettings();\nconsole.log(settings);`,
+          toast: `await bridge.toast("Connector running", {\n  variant: "info",\n  durationMs: 2200\n});`,
+          get: `const result = await bridge.get("https://example.com/api/me", {\n  headers: {\n    Accept: "application/json"\n  }\n});\nconsole.log(result);`,
+          post: `const result = await bridge.post("https://example.com/api/items", {\n  title: document.title,\n  url: location.href\n}, {\n  headers: {\n    "Content-Type": "application/json"\n  }\n});\nconsole.log(result);`,
+          download: `await bridge.download({\n  filename: "notes.md",\n  content: "# " + (document.title || "Untitled") + "\\n\\n" + location.href,\n  mimeType: "text/markdown"\n});`,
+          copyText: `await bridge.copyText([document.title || "Untitled", location.href].join("\\n"));`,
+          tryCatch: `try {\n  // bridge calls here\n} catch (error) {\n  console.error(error);\n  await bridge.toast(error instanceof Error ? error.message : "Connector failed", {\n    variant: "error",\n    durationMs: 3200\n  });\n}`
+        };
+
+        const textarea = elements.scriptBody;
+        const snippet = snippets[name];
+        if (!snippet) {
+          return;
+        }
+        const start = textarea.selectionStart || 0;
+        const end = textarea.selectionEnd || 0;
+        const prefix = start > 0 && !textarea.value.slice(0, start).endsWith("\n") ? "\n" : "";
+        const suffix = end < textarea.value.length && !textarea.value.slice(end).startsWith("\n") ? "\n" : "";
+        textarea.setRangeText(`${prefix}${snippet}${suffix}`, start, end, "end");
+        syncCurrentScriptFromDom();
+        textarea.focus();
+      }
+
+      function importJsonText(text) {
+        try {
+          const parsed = JSON.parse(text);
+          const imported = Array.isArray(parsed?.scripts)
+            ? parsed.scripts.map(normalizeScript).filter(Boolean)
+            : [normalizeScript(parsed)].filter(Boolean);
+
+          if (imported.length === 0) {
+            throw new Error("No scripts found in import.");
+          }
+
+          syncCurrentScriptFromDom();
+
+          const map = new Map(state.scripts.map((script) => [script.id, script]));
+          imported.forEach((script) => {
+            map.set(script.id, script);
+          });
+          state.scripts = Array.from(map.values());
+          state.selectedId = imported[0].id;
+          persist("Imported script data.");
+          render();
+          showStatus(elements.libraryStatus, `Imported ${imported.length} script${imported.length === 1 ? "" : "s"}.`, "good");
+        } catch (error) {
+          showStatus(
+            elements.libraryStatus,
+            error instanceof Error ? `Import failed: ${error.message}` : "Import failed.",
+            "warn"
+          );
+        }
+      }
+
+      function downloadText(filename, text) {
+        const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      async function copyText(text) {
+        await navigator.clipboard.writeText(text);
+      }
+
+      function showStatus(node, message, tone) {
+        node.textContent = message || "";
+        node.className = `status${tone ? ` ${tone}` : ""}`;
+      }
+
+      function normalizeVersion(value) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
+      }
+
+      function slugify(value) {
+        return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "connector";
+      }
+
+      function createId() {
+        if (window.crypto && typeof window.crypto.randomUUID === "function") {
+          return window.crypto.randomUUID();
+        }
+        return `connector-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+    </script>
+  </body>
+</html>
