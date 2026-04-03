@@ -46,6 +46,12 @@ export interface ToastPayload {
   durationMs?: number;
 }
 
+export interface DownloadPayload {
+  filename: string;
+  content: string;
+  mimeType?: string;
+}
+
 export interface PostActionMessage extends ActionMessageBase {
   action: "post";
   payload: PostPayload;
@@ -61,7 +67,12 @@ export interface ToastActionMessage extends ActionMessageBase {
   payload: ToastPayload;
 }
 
-export type ActionMessage = PostActionMessage | GetActionMessage | ToastActionMessage;
+export interface DownloadActionMessage extends ActionMessageBase {
+  action: "download";
+  payload: DownloadPayload;
+}
+
+export type ActionMessage = PostActionMessage | GetActionMessage | ToastActionMessage | DownloadActionMessage;
 export type BridgeMessage = RegisterMessage | ActionMessage;
 
 export interface BridgeSuccessResponse {
@@ -126,6 +137,9 @@ export interface ExecutionLogEntry {
   action?: BridgeAction | "register";
   url?: string;
   text?: string;
+  filename?: string;
+  sizeBytes?: number;
+  mimeType?: string;
   status?: number;
   errorCode?: string;
 }

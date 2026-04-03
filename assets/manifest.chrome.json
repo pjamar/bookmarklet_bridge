@@ -12,6 +12,7 @@
     "96": "icons/icon-96.png"
   },
   "permissions": [
+    "downloads",
     "storage"
   ],
   "host_permissions": [

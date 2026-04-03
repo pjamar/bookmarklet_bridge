@@ -14,6 +14,7 @@ import type {
 import { parseBridgeMessage } from "../shared/schema";
 import { handleGet } from "./actions/get";
 import { handlePost } from "./actions/post";
+import { handleDownload } from "./actions/download";
 import { getSettings, saveSettings } from "./config/store";
 import { appendLog, clearLogs, listLogs } from "./log/store";
 import {
@@ -94,6 +95,23 @@ async function executeAction(message: ActionMessage, sender: MessageSenderContex
         outcome: "success",
         action: "toast",
         text: message.payload.message
+      });
+      return createSuccessResponse(message.requestId, result);
+    }
+    case "download": {
+      const result = await handleDownload(message);
+      await appendLog({
+        id: `${message.requestId}:download`,
+        timestamp: new Date().toISOString(),
+        executionId: message.executionId,
+        bookmarkletName: session?.bookmarkletName,
+        bookmarkletVersion: session?.bookmarkletVersion,
+        kind: "action",
+        outcome: "success",
+        action: "download",
+        filename: result.filename,
+        sizeBytes: result.sizeBytes,
+        mimeType: result.mimeType
       });
       return createSuccessResponse(message.requestId, result);
     }
@@ -252,6 +270,12 @@ export async function wrapInternalMessage(
           action: actionMessage.action,
           url: "url" in actionMessage.payload ? actionMessage.payload.url : undefined,
           text: actionMessage.action === "toast" ? actionMessage.payload.message : undefined,
+          filename: actionMessage.action === "download" ? actionMessage.payload.filename : undefined,
+          sizeBytes:
+            actionMessage.action === "download"
+              ? new TextEncoder().encode(actionMessage.payload.content).length
+              : undefined,
+          mimeType: actionMessage.action === "download" ? actionMessage.payload.mimeType : undefined,
           errorCode: error.code
         });
       } else if ("message" in message && message.message && message.message.kind === "register" && error.code === "denied") {

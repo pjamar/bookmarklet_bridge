@@ -3,7 +3,7 @@ import { HIGHLIGHT_THEME, highlightIntoElement } from "../shared/highlight";
 import type { BridgeSettings, BridgeState, ExecutionLogEntry, PolicyEntry } from "../shared/types";
 
 type ViewName = "settings" | "approved" | "denied" | "log" | "generator";
-type GeneratorSnippet = "toast" | "get" | "post" | "tryCatch";
+type GeneratorSnippet = "toast" | "get" | "post" | "download" | "tryCatch";
 
 interface GeneratorDraft {
   name: string;
@@ -253,6 +253,7 @@ function renderGenerator(): string {
           <button id="generatorSnippetToast" class="button inline pastel-mint" data-snippet="toast">Insert toast</button>
           <button id="generatorSnippetGet" class="button inline pastel-sky" data-snippet="get">Insert GET</button>
           <button id="generatorSnippetPost" class="button inline pastel-peach" data-snippet="post">Insert POST</button>
+          <button id="generatorSnippetDownload" class="button inline pastel-gold" data-snippet="download">Insert download</button>
           <button id="generatorSnippetTryCatch" class="button inline pastel-lilac" data-snippet="tryCatch">Insert try/catch</button>
         </div>
         <div class="row">
@@ -291,6 +292,15 @@ console.log(result);`
           `await bridge.toast("Memo added", {
   variant: "success",
   durationMs: 2200
+});`
+        )}
+        ${renderGeneratorActionDoc(
+          "bridge.download({ filename, content, mimeType? })",
+          "Save generated text content through the browser download manager. Filenames are sanitized and contents are not logged.",
+          `await bridge.download({
+  filename: "page-notes.md",
+  content: "# " + (document.title || "Untitled") + "\\n\\n" + location.href,
+  mimeType: "text/markdown"
 });`
         )}
       </div>
@@ -385,6 +395,15 @@ function buildLogSummary(entry: ExecutionLogEntry): { title: string; subtitle: s
   }
   if (entry.text) {
     bits.push(`text=${entry.text}`);
+  }
+  if (entry.filename) {
+    bits.push(`filename=${entry.filename}`);
+  }
+  if (entry.sizeBytes !== undefined) {
+    bits.push(`bytes=${String(entry.sizeBytes)}`);
+  }
+  if (entry.mimeType) {
+    bits.push(`mimeType=${entry.mimeType}`);
   }
   if (entry.status !== undefined) {
     bits.push(`status=${String(entry.status)}`);
@@ -574,6 +593,21 @@ async function runBookmarklet({ name, version, run }) {
           durationMs: options.durationMs
         }
       });
+    },
+    download(options) {
+      return bridgeSend({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-download",
+        executionId,
+        action: "download",
+        payload: {
+          filename: options.filename,
+          content: options.content,
+          mimeType: options.mimeType
+        }
+      });
     }
   };
 
@@ -682,6 +716,8 @@ function buildSnippet(snippet: GeneratorSnippet): string {
       return `const result = await bridge.get("https://example.com/api/me", {\n  headers: {\n    Accept: "application/json"\n  }\n});\nconsole.log(result);`;
     case "post":
       return `const result = await bridge.post("https://example.com/api/items", {\n  title: document.title,\n  url: location.href,\n  selection: window.getSelection ? String(window.getSelection()).trim() : ""\n}, {\n  headers: {\n    "Content-Type": "application/json"\n  }\n});\nconsole.log(result);`;
+    case "download":
+      return `await bridge.download({\n  filename: "page-notes.md",\n  content: [\n    "# " + (document.title || "Untitled"),\n    "",\n    location.href,\n    "",\n    window.getSelection ? String(window.getSelection()).trim() : ""\n  ].join("\\n"),\n  mimeType: "text/markdown"\n});`;
     case "tryCatch":
       return `try {\n  // bridge calls here\n} catch (error) {\n  console.error(error);\n  await bridge.toast(error instanceof Error ? error.message : "Bookmarklet failed", {\n    variant: "error",\n    durationMs: 3200\n  });\n}`;
   }

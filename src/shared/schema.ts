@@ -3,6 +3,7 @@ import {
   BRIDGE_NAMESPACE,
   BRIDGE_VERSION,
   MAX_BODY_BYTES,
+  MAX_DOWNLOAD_BYTES,
   MAX_HEADERS,
   TOAST_VARIANTS
 } from "./constants";
@@ -16,6 +17,7 @@ import type {
   JsonValue,
   PostPayload,
   RegisterMessage,
+  DownloadPayload,
   ToastPayload
 } from "./types";
 
@@ -142,6 +144,25 @@ function parseToastPayload(value: unknown): ToastPayload {
   };
 }
 
+function parseDownloadPayload(value: unknown): DownloadPayload {
+  if (!isPlainObject(value)) {
+    throw new BridgeError("invalid_request", "payload must be a plain object.");
+  }
+  const content = requireString(value.content, "payload.content");
+  if (new TextEncoder().encode(content).length > MAX_DOWNLOAD_BYTES) {
+    throw new BridgeError("payload_too_large", "payload.content is too large.");
+  }
+  const mimeType = value.mimeType;
+  if (mimeType !== undefined && typeof mimeType !== "string") {
+    throw new BridgeError("invalid_request", "payload.mimeType must be a string.");
+  }
+  return {
+    filename: requireString(value.filename, "payload.filename"),
+    content,
+    mimeType: mimeType as string | undefined
+  };
+}
+
 function parseActionMessage(value: Record<string, unknown>): ActionMessage {
   const action = requireString(value.action, "action") as BridgeAction;
   if (!ACTIONS.includes(action)) {
@@ -163,6 +184,8 @@ function parseActionMessage(value: Record<string, unknown>): ActionMessage {
       return { ...base, action, payload: parseGetPayload(value.payload) };
     case "toast":
       return { ...base, action, payload: parseToastPayload(value.payload) };
+    case "download":
+      return { ...base, action, payload: parseDownloadPayload(value.payload) };
   }
 }
 

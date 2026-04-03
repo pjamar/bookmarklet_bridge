@@ -30,6 +30,13 @@ declare const browser: {
       addListener(callback: (tabId: number) => void | Promise<void>): void;
     };
   };
+  downloads: {
+    download(options: {
+      url: string;
+      filename?: string;
+      conflictAction?: "uniquify" | "overwrite" | "prompt";
+    }): Promise<number>;
+  };
   storage: {
     local: {
       get(key?: string | string[] | Record<string, unknown>): Promise<Record<string, unknown>>;
