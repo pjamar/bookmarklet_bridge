@@ -1,4 +1,5 @@
 import { APPROVAL_DECISIONS, APPROVAL_HOST_ID, INTERNAL_MESSAGE_KIND } from "../shared/constants";
+import { formatGeneratorJavaScript } from "../shared/generator-format";
 import { HIGHLIGHT_THEME, highlightIntoElement } from "../shared/highlight";
 import { renderMarkdown } from "../shared/markdown";
 import type {
@@ -164,7 +165,7 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
     const pre = document.createElement("pre");
     const code = document.createElement("code");
     code.dataset.highlight = "javascript";
-    code.textContent = String(approval.decodedSource ?? "");
+    code.textContent = formatGeneratorJavaScript(String(approval.decodedSource ?? ""));
     pre.append(code);
 
     const actions = document.createElement("div");

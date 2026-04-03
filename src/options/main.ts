@@ -1,4 +1,20 @@
 import { INTERNAL_MESSAGE_KIND } from "../shared/constants";
+import {
+  buildGeneratorOutput,
+  indentBlock
+} from "../shared/bookmarklet-generator";
+import { formatGeneratorJavaScript, formatGeneratorSettingsText } from "../shared/generator-format";
+import {
+  scanBookmarkTreeForBridgeBookmarklets,
+  type BridgeBookmarkletScanResult
+} from "../shared/bookmarklet-scan";
+import {
+  buildConfigurationExport,
+  decryptConfigurationExport,
+  encryptConfigurationExport,
+  parseEncryptedConfigurationExport
+} from "../shared/configuration-backup";
+import { isBridgeResponse } from "../shared/errors";
 import { HIGHLIGHT_THEME, highlightIntoElement } from "../shared/highlight";
 import { renderMarkdown } from "../shared/markdown";
 import type {
@@ -12,21 +28,15 @@ import type {
   PolicyEntry
 } from "../shared/types";
 
-type ViewName = "settings" | "approved" | "denied" | "log" | "generator";
+type ViewName = "settings" | "approved" | "denied" | "log" | "generator" | "scanner";
 type GeneratorSnippet = "toast" | "get" | "post" | "download" | "downloadUrl" | "copyText" | "tryCatch";
 
 interface GeneratorDraft {
   name: string;
   version: number;
   extendedDescription: string;
+  settingsText: string;
   runBody: string;
-}
-
-interface GeneratorBuildResult {
-  runSource: string;
-  fullSource: string;
-  bookmarkletUrl: string;
-  error: string | null;
 }
 
 let state: BridgeState = {
@@ -42,11 +52,18 @@ let state: BridgeState = {
 };
 let currentView: ViewName = "settings";
 let selectedPolicyHash: string | null = null;
+let selectedPolicyScreen: "detail" | "settings" = "detail";
+let policySettingsStatus: { definitionHash: string; tone: "success" | "error"; message: string } | null = null;
+let settingsStatus: { tone: "success" | "error"; message: string } | null = null;
+let bookmarkScannerStatus: { tone: "success" | "error"; message: string } | null = null;
+let generatorFormatStatus: { tone: "success" | "error"; message: string } | null = null;
+let scannedBookmarklets: BridgeBookmarkletScanResult[] = [];
 const GENERATOR_DRAFT_STORAGE_KEY = "bookmarklet-bridge.generator-draft";
 const defaultGeneratorDraft: GeneratorDraft = {
   name: "My Bookmarklet",
   version: 1,
   extendedDescription: "",
+  settingsText: "{}",
   runBody: `const selection = window.getSelection ? String(window.getSelection()).trim() : "";
 const title = document.title || "Untitled";
 
@@ -86,7 +103,7 @@ function render(): void {
     <div class="app">
       <aside>
         <div class="title">Bookmarklet Bridge</div>
-        <p class="muted">Review bookmarklet source, manage bridge policy, and generate bookmarklets with the simplified helper API.</p>
+        <p class="muted">Review bookmarklet source, manage bridge policy, scan bookmarks, and generate bookmarklets for the injected bridge runtime.</p>
         <div class="row" style="margin: 0 0 16px;">
           <a class="button inline pastel-sage" href="api-reference.html" target="_blank" rel="noopener noreferrer">Open API Reference</a>
         </div>
@@ -94,11 +111,18 @@ function render(): void {
           ${navButton("settings", "Bridge Settings")}
           ${navButton("approved", "Approved")}
           ${navButton("denied", "Denied")}
+          ${navButton("scanner", "Bookmark Scanner")}
           ${navButton("log", "Log")}
           ${navButton("generator", "Generator")}
         </nav>
       </aside>
-      <main>${selectedPolicy ? renderPolicyDetail(selectedPolicy) : renderView(currentView)}</main>
+      <main>${
+        selectedPolicy
+          ? selectedPolicyScreen === "settings"
+            ? renderPolicySettingsScreen(selectedPolicy)
+            : renderPolicyDetail(selectedPolicy)
+          : renderView(currentView)
+      }</main>
     </div>
   `;
   app.replaceChildren(createFragmentFromHtml(markup));
@@ -126,6 +150,8 @@ function navButtonClass(view: ViewName): string {
       return "nav-mint";
     case "denied":
       return "nav-rose";
+    case "scanner":
+      return "nav-sky";
     case "log":
       return "nav-sky";
     case "generator":
@@ -143,12 +169,17 @@ function renderView(view: ViewName): string {
       return renderPolicyList("deny", "Denied bookmarklets");
     case "log":
       return renderLogView();
+    case "scanner":
+      return renderBookmarkScanner();
     case "generator":
       return renderGenerator();
   }
 }
 
 function renderSettings(): string {
+  const settingsStatusMarkup = settingsStatus
+    ? `<div class="status ${settingsStatus.tone}">${escapeHtml(settingsStatus.message)}</div>`
+    : "";
   return `
     <section class="panel">
       <h2>Bridge Settings</h2>
@@ -170,8 +201,13 @@ function renderSettings(): string {
         </div>
       </div>
       <div class="row" style="margin-top:16px;">
-        <button id="saveSettings" class="button inline">Save Settings</button>
+        <button id="saveSettings" class="button inline pastel-primary">Save Settings</button>
+        <button id="exportEncryptedConfiguration" class="button inline pastel-blue">Export Encrypted Backup</button>
+        <button id="importEncryptedConfiguration" class="button inline pastel-gold">Import Encrypted Backup</button>
+        <input id="importEncryptedConfigurationFile" type="file" accept=".json,application/json" hidden />
       </div>
+      <p class="muted">Backups include global bridge settings, approved bookmarklets, and bookmarklet-scoped settings. The JSON envelope stays readable enough to identify the file and export date, while the payload remains encrypted.</p>
+      ${settingsStatusMarkup}
     </section>
   `;
 }
@@ -193,6 +229,11 @@ function renderPolicyList(decision: "allow" | "deny", title: string): string {
                 <div class="muted">Last used: ${escapeHtml(policy.lastUsedAt ?? "Never")}</div>
                 <div class="row" style="margin-top:10px;">
                   <button class="button inline" data-open-policy="${policy.definitionHash}">Inspect</button>
+                  ${
+                    decision === "allow" && policyHasEditableSettings(policy)
+                      ? `<button class="button inline pastel-sky" data-open-policy-settings="${policy.definitionHash}">Edit Settings</button>`
+                      : ""
+                  }
                   <button class="button inline" data-set-decision="${policy.definitionHash}" data-next-decision="${decision === "allow" ? "deny" : "allow"}">
                     Mark ${decision === "allow" ? "Denied" : "Allowed"}
                   </button>
@@ -259,6 +300,33 @@ function renderPolicyDetail(policy: PolicyEntry): string {
   `;
 }
 
+function renderPolicySettingsScreen(policy: PolicyEntry): string {
+  if (!policyHasEditableSettings(policy)) {
+    return `
+      <section class="panel">
+        <div class="row" style="justify-content:space-between;">
+          <h2>Bookmarklet Settings</h2>
+          <button class="button inline" data-close-detail="true">Back</button>
+        </div>
+        <p class="muted">This bookmarklet does not declare any editable settings.</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="panel">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div>
+          <h2>Edit Bookmarklet Settings</h2>
+          <p class="muted">${escapeHtml(policy.name)} v${policy.version} • ${escapeHtml(policy.definitionHash)}</p>
+        </div>
+        <button class="button inline" data-close-detail="true">Back</button>
+      </div>
+    </section>
+    ${renderPolicySettingsSection(policy)}
+  `;
+}
+
 function renderPolicySettingsSection(policy: PolicyEntry): string {
   const schema = state.bookmarkletSettingsSchemas[policy.definitionHash];
   if (policy.decision !== "allow" || !schema || Object.keys(schema).length === 0) {
@@ -266,6 +334,10 @@ function renderPolicySettingsSection(policy: PolicyEntry): string {
   }
 
   const values = state.bookmarkletSettingsValues[policy.definitionHash] ?? {};
+  const status =
+    policySettingsStatus?.definitionHash === policy.definitionHash
+      ? `<div class="status ${policySettingsStatus.tone}">${escapeHtml(policySettingsStatus.message)}</div>`
+      : "";
   return `
     <section class="panel">
       <div class="row" style="justify-content:space-between; align-items:center;">
@@ -274,10 +346,11 @@ function renderPolicySettingsSection(policy: PolicyEntry): string {
           <p class="muted">These values are scoped to this exact definition hash and are visible to the bookmarklet through <code>bridge.getSettings()</code>.</p>
         </div>
         <div class="row">
-          <button class="button inline" data-reset-all-settings="${escapeAttr(policy.definitionHash)}">Reset All</button>
-          <button class="button inline" data-save-policy-settings="${escapeAttr(policy.definitionHash)}">Save Settings</button>
+          <button class="button inline pastel-peach" data-reset-all-settings="${escapeAttr(policy.definitionHash)}">Reset All</button>
+          <button class="button inline pastel-primary" data-save-policy-settings="${escapeAttr(policy.definitionHash)}">Save Settings</button>
         </div>
       </div>
+      ${status}
       <div class="grid">
         ${Object.entries(schema)
           .map(([key, definition]) => renderPolicySettingField(policy.definitionHash, key, definition, values[key]))
@@ -285,6 +358,11 @@ function renderPolicySettingsSection(policy: PolicyEntry): string {
       </div>
     </section>
   `;
+}
+
+function policyHasEditableSettings(policy: PolicyEntry): boolean {
+  const schema = state.bookmarkletSettingsSchemas[policy.definitionHash];
+  return policy.decision === "allow" && Boolean(schema && Object.keys(schema).length > 0);
 }
 
 function renderPolicySettingField(
@@ -305,7 +383,7 @@ function renderPolicySettingField(
           <div class="muted">Key: <code>${escapeHtml(key)}</code> • Type: <code>${escapeHtml(definition.type)}</code></div>
           <div class="muted">Default: <code>${escapeHtml(formatSettingValue(definition.default))}</code></div>
         </div>
-        <button class="button inline" data-reset-setting="${escapeAttr(key)}" data-definition-hash="${escapeAttr(definitionHash)}">Reset</button>
+        <button class="button inline pastel-gold" data-reset-setting="${escapeAttr(key)}" data-definition-hash="${escapeAttr(definitionHash)}">Reset</button>
       </div>
       <label for="${escapeAttr(inputId)}" style="display:block; margin-top:12px;">
         <div>Current Value</div>
@@ -348,12 +426,15 @@ function renderGenerator(): string {
   const buildResult = buildGeneratorOutput(generatorDraft);
   const buildStatus = buildResult.error
     ? `<div class="status error">Build failed: ${escapeHtml(buildResult.error)}</div>`
-    : `<div class="status success">Bundle ready. Edit the code, then rebuild to refresh the bookmarklet URL.</div>`;
+    : `<div class="status success">Bridge output ready. Edit the code, then rebuild to refresh the bookmarklet URL.</div>`;
+  const formatStatus = generatorFormatStatus
+    ? `<div class="status ${generatorFormatStatus.tone}">${escapeHtml(generatorFormatStatus.message)}</div>`
+    : "";
 
   return `
     <section class="panel">
       <h2>Bookmarklet IDE</h2>
-      <p class="muted">Write the body of <code>run(bridge)</code>. The extension helper, registration flow, and bridge transport are injected automatically.</p>
+      <p class="muted">Write the body of <code>run(bridge)</code>. Generated bookmarklets use <code>window.BookmarkletBridge.run(...)</code> and the runtime injected by the extension.</p>
       <div class="grid ide-layout">
         <div class="grid two">
           <label><div>Name</div><input id="genName" value="${escapeAttr(generatorDraft.name)}" /></label>
@@ -362,6 +443,11 @@ function renderGenerator(): string {
         <label>
           <div>Extended Description (Markdown)</div>
           <textarea id="genExtendedDescription" spellcheck="false">${escapeHtml(generatorDraft.extendedDescription)}</textarea>
+        </label>
+        <label>
+          <div>Settings Schema JSON</div>
+          <textarea id="genSettingsText" spellcheck="false">${escapeHtml(generatorDraft.settingsText)}</textarea>
+          <div class="muted">Optional bookmarklet settings schema. These values become available through <code>bridge.getSettings()</code>.</div>
         </label>
         <label>
           <div>run(bridge) body</div>
@@ -378,10 +464,12 @@ function renderGenerator(): string {
         </div>
         <div class="row">
           <button id="generateBookmarklet" class="button inline pastel-primary">Build Bookmarklet</button>
+          <button id="prettyPrintGenerator" class="button inline pastel-sage">Pretty Print</button>
           <button id="resetGeneratorDraft" class="button inline pastel-rose">Reset Example</button>
           <button id="copyGeneratorSource" class="button inline pastel-gold">Copy Bundle Source</button>
           <button id="copyGeneratorBookmarklet" class="button inline pastel-blue">Copy Bookmarklet URL</button>
         </div>
+        ${formatStatus}
         ${buildStatus}
       </div>
     </section>
@@ -447,7 +535,7 @@ console.log(result);`
 ].filter(Boolean).join("\\n"));`
         )}
       </div>
-      <p class="muted">The helper already handles registration, execution ids, request ids, and <code>window.postMessage</code>. Keep bookmarklet logic inside <code>run(bridge)</code>.</p>
+      <p class="muted">The runtime handles registration, execution ids, request ids, and <code>window.postMessage</code>. Keep bookmarklet logic inside <code>run(bridge)</code>.</p>
     </section>
     <section class="panel">
       <h3>Readable Source</h3>
@@ -455,8 +543,8 @@ console.log(result);`
       <pre><code id="generatorSource" data-highlight="javascript">${escapeHtml(buildResult.runSource)}</code></pre>
     </section>
     <section class="panel">
-      <h3>Full Bundle</h3>
-      <p class="muted">This is the helper-wrapped source that becomes the bookmarklet payload.</p>
+      <h3>Generated Wrapper</h3>
+      <p class="muted">This wrapper checks for window.BookmarkletBridge.run and then forwards the config to the injected runtime.</p>
       <pre><code id="generatorBundleSource" data-highlight="javascript">${escapeHtml(buildResult.fullSource)}</code></pre>
     </section>
     <section class="panel">
@@ -505,6 +593,56 @@ function renderLogView(): string {
           : `<div class="list-item empty-state">
               <strong>No recent log entries.</strong>
               <div class="muted">Run a bookmarklet through the bridge to populate this view.</div>
+            </div>`
+      }
+    </section>
+  `;
+}
+
+function renderBookmarkScanner(): string {
+  const statusMarkup = bookmarkScannerStatus
+    ? `<div class="status ${bookmarkScannerStatus.tone}">${escapeHtml(bookmarkScannerStatus.message)}</div>`
+    : "";
+
+  return `
+    <section class="panel">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div>
+          <h2>Bookmark Scanner</h2>
+          <p class="muted">Scan your browser bookmarks for bridge-compatible bookmarklets that use <code>window.BookmarkletBridge.run(...)</code>.</p>
+        </div>
+        <button id="scanBookmarks" class="button inline pastel-sky">Scan Bookmarks</button>
+      </div>
+      ${statusMarkup}
+    </section>
+    <section class="panel">
+      <h3>Detected Bookmarklets</h3>
+      <p class="muted">${scannedBookmarklets.length} compatible bookmarklet${scannedBookmarklets.length === 1 ? "" : "s"} found in the current scan.</p>
+      ${
+        scannedBookmarklets.length > 0
+          ? scannedBookmarklets
+              .map(
+                (entry) => `
+                  <div class="list-item">
+                    <div class="row" style="justify-content:space-between; align-items:flex-start; gap:16px;">
+                      <div>
+                        <strong>${escapeHtml(entry.name)}</strong>
+                        <div class="muted">Version ${entry.version} • Bridge Global</div>
+                        <div class="muted">Bookmark: ${escapeHtml(entry.bookmarkTitle)}</div>
+                        <div class="muted">Location: ${escapeHtml(entry.location)}</div>
+                      </div>
+                    </div>
+                    <div style="margin-top:10px;">${entry.description ? `<div class="markdown-body">${renderMarkdown(entry.description)}</div>` : `<div class="muted">No extended description declared.</div>`}</div>
+                    <div class="row" style="margin-top:10px;">
+                      <button class="button inline pastel-gold" data-edit-generator="${escapeAttr(entry.location)}">Edit in Generator</button>
+                    </div>
+                  </div>
+                `
+              )
+              .join("")
+          : `<div class="list-item empty-state">
+              <strong>No compatible bookmarklets found yet.</strong>
+              <div class="muted">Run a scan to search your bookmarks for bridge-global bookmarklets.</div>
             </div>`
       }
     </section>
@@ -656,21 +794,179 @@ function resetPolicySettingControl(definitionHash: string, key: string, definiti
 async function savePolicySettings(definitionHash: string): Promise<void> {
   const values = collectPolicySettingsValues(definitionHash);
   if (!values) {
+    policySettingsStatus = {
+      definitionHash,
+      tone: "error",
+      message: "Unable to collect bookmarklet settings."
+    };
     return;
   }
 
-  await browser.runtime.sendMessage({
-    kind: INTERNAL_MESSAGE_KIND.SAVE_BOOKMARKLET_SETTINGS_VALUES,
-    definitionHash,
-    values
-  });
-  await refresh();
+  try {
+    unwrapInternalResponse(
+      await browser.runtime.sendMessage({
+        kind: INTERNAL_MESSAGE_KIND.SAVE_BOOKMARKLET_SETTINGS_VALUES,
+        definitionHash,
+        values
+      })
+    );
+    policySettingsStatus = {
+      definitionHash,
+      tone: "success",
+      message: "Bookmarklet settings saved."
+    };
+    await refresh();
+  } catch (error) {
+    policySettingsStatus = {
+      definitionHash,
+      tone: "error",
+      message: error instanceof Error ? error.message : "Failed to save bookmarklet settings."
+    };
+    render();
+  }
+}
+
+function downloadText(filename: string, text: string): void {
+  const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function promptForEncryptionKey(mode: "export" | "import"): string | null {
+  const key = window.prompt(
+    mode === "export"
+      ? "Enter an encryption key for this backup export."
+      : "Enter the encryption key for this backup import."
+  );
+  if (!key || !key.trim()) {
+    return null;
+  }
+
+  if (mode === "export") {
+    const confirmation = window.prompt("Confirm the encryption key.");
+    if (confirmation !== key) {
+      settingsStatus = {
+        tone: "error",
+        message: "Encryption key confirmation did not match."
+      };
+      render();
+      return null;
+    }
+  }
+
+  return key;
+}
+
+function buildBackupFilename(exportedAt: string): string {
+  return `bookmarklet-bridge-backup-${exportedAt.replaceAll(":", "-")}.json`;
+}
+
+function unwrapInternalResponse<T>(value: unknown): T {
+  if (isBridgeResponse(value) && !value.ok) {
+    throw new Error(value.error.message);
+  }
+  return value as T;
+}
+
+async function exportEncryptedConfiguration(): Promise<void> {
+  const key = promptForEncryptionKey("export");
+  if (!key) {
+    return;
+  }
+
+  try {
+    const payload = buildConfigurationExport(state);
+    const encrypted = await encryptConfigurationExport(payload, key);
+    downloadText(buildBackupFilename(payload.exportedAt), JSON.stringify(encrypted, null, 2));
+    settingsStatus = {
+      tone: "success",
+      message: `Encrypted backup exported for ${payload.approvedPolicies.length} approved bookmarklet${payload.approvedPolicies.length === 1 ? "" : "s"}.`
+    };
+    render();
+  } catch (error) {
+    settingsStatus = {
+      tone: "error",
+      message: error instanceof Error ? error.message : "Failed to export encrypted backup."
+    };
+    render();
+  }
+}
+
+async function importEncryptedConfigurationFromFile(file: File): Promise<void> {
+  const key = promptForEncryptionKey("import");
+  if (!key) {
+    return;
+  }
+
+  try {
+    const rawText = await file.text();
+    const encrypted = parseEncryptedConfigurationExport(JSON.parse(rawText) as unknown);
+    const payload = await decryptConfigurationExport(encrypted, key);
+    const result = unwrapInternalResponse<{ importedApprovedPolicies?: number }>(
+      await browser.runtime.sendMessage({
+        kind: INTERNAL_MESSAGE_KIND.IMPORT_CONFIGURATION,
+        payload
+      })
+    );
+    settingsStatus = {
+      tone: "success",
+      message: `Imported backup from ${encrypted.exportedAt} with ${result.importedApprovedPolicies ?? payload.approvedPolicies.length} approved bookmarklet${(result.importedApprovedPolicies ?? payload.approvedPolicies.length) === 1 ? "" : "s"}.`
+    };
+    selectedPolicyHash = null;
+    selectedPolicyScreen = "detail";
+    await refresh();
+  } catch (error) {
+    settingsStatus = {
+      tone: "error",
+      message: error instanceof Error ? error.message : "Failed to import encrypted backup."
+    };
+    render();
+  }
+}
+
+async function scanBookmarksForBridgeBookmarklets(): Promise<void> {
+  try {
+    const tree = await browser.bookmarks.getTree();
+    scannedBookmarklets = scanBookmarkTreeForBridgeBookmarklets(tree);
+    bookmarkScannerStatus = {
+      tone: "success",
+      message: `Scan finished. Found ${scannedBookmarklets.length} compatible bookmarklet${scannedBookmarklets.length === 1 ? "" : "s"}.`
+    };
+    render();
+  } catch (error) {
+    bookmarkScannerStatus = {
+      tone: "error",
+      message: error instanceof Error ? error.message : "Failed to scan bookmarks."
+    };
+    render();
+  }
+}
+
+function populateGeneratorFromScanResult(entry: BridgeBookmarkletScanResult): void {
+  generatorDraft = {
+    name: entry.name || defaultGeneratorDraft.name,
+    version: Number.isFinite(entry.version) && entry.version > 0 ? Math.floor(entry.version) : defaultGeneratorDraft.version,
+    extendedDescription: entry.description,
+    settingsText: entry.settingsText || "{}",
+    runBody: entry.runBody || ""
+  };
+  formatGeneratorDraft();
+  persistGeneratorDraft();
+  currentView = "generator";
 }
 
 function bindEvents(): void {
   document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
       selectedPolicyHash = null;
+      selectedPolicyScreen = "detail";
+      policySettingsStatus = null;
       currentView = button.dataset.view as ViewName;
       render();
     });
@@ -689,8 +985,38 @@ function bindEvents(): void {
         durationMs: Number((document.getElementById("toastDurationMs") as HTMLInputElement).value)
       }
     };
-    await browser.runtime.sendMessage({ kind: INTERNAL_MESSAGE_KIND.SAVE_SETTINGS, settings });
-    await refresh();
+    try {
+      unwrapInternalResponse(await browser.runtime.sendMessage({ kind: INTERNAL_MESSAGE_KIND.SAVE_SETTINGS, settings }));
+      settingsStatus = {
+        tone: "success",
+        message: "Global bridge settings saved."
+      };
+      await refresh();
+    } catch (error) {
+      settingsStatus = {
+        tone: "error",
+        message: error instanceof Error ? error.message : "Failed to save global bridge settings."
+      };
+      render();
+    }
+  });
+
+  document.getElementById("exportEncryptedConfiguration")?.addEventListener("click", () => {
+    void exportEncryptedConfiguration();
+  });
+
+  document.getElementById("importEncryptedConfiguration")?.addEventListener("click", () => {
+    (document.getElementById("importEncryptedConfigurationFile") as HTMLInputElement | null)?.click();
+  });
+
+  document.getElementById("importEncryptedConfigurationFile")?.addEventListener("change", (event) => {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) {
+      return;
+    }
+    void importEncryptedConfigurationFromFile(file);
   });
 
   document.getElementById("clearLogs")?.addEventListener("click", async () => {
@@ -698,9 +1024,36 @@ function bindEvents(): void {
     await refresh();
   });
 
+  document.getElementById("scanBookmarks")?.addEventListener("click", () => {
+    void scanBookmarksForBridgeBookmarklets();
+  });
+
+  document.querySelectorAll<HTMLButtonElement>("[data-edit-generator]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const location = button.dataset.editGenerator;
+      const entry = scannedBookmarklets.find((candidate) => candidate.location === location);
+      if (!entry) {
+        return;
+      }
+      populateGeneratorFromScanResult(entry);
+      render();
+    });
+  });
+
   document.querySelectorAll<HTMLButtonElement>("[data-open-policy]").forEach((button) => {
     button.addEventListener("click", () => {
       selectedPolicyHash = button.dataset.openPolicy ?? null;
+      selectedPolicyScreen = "detail";
+      policySettingsStatus = null;
+      render();
+    });
+  });
+
+  document.querySelectorAll<HTMLButtonElement>("[data-open-policy-settings]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedPolicyHash = button.dataset.openPolicySettings ?? null;
+      selectedPolicyScreen = "settings";
+      policySettingsStatus = null;
       render();
     });
   });
@@ -723,12 +1076,16 @@ function bindEvents(): void {
         definitionHash: button.dataset.deletePolicy
       });
       selectedPolicyHash = null;
+      selectedPolicyScreen = "detail";
+      policySettingsStatus = null;
       await refresh();
     });
   });
 
   document.querySelector("[data-close-detail]")?.addEventListener("click", () => {
     selectedPolicyHash = null;
+    selectedPolicyScreen = "detail";
+    policySettingsStatus = null;
     render();
   });
 
@@ -777,169 +1134,14 @@ function bindEvents(): void {
   bindGeneratorEvents();
 }
 
-function buildHelperSource(): string {
-  return `const BRIDGE_NAMESPACE = "bookmarklet-bridge";
-const BRIDGE_VERSION = 2;
-
-function bridgeSend(message) {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      window.removeEventListener("message", onMessage);
-      reject(new Error("Bridge response timed out."));
-    }, 15000);
-
-    function onMessage(event) {
-      const data = event.data;
-      if (
-        !data ||
-        data.namespace !== BRIDGE_NAMESPACE ||
-        data.requestId !== message.requestId ||
-        typeof data.ok !== "boolean"
-      ) {
-        return;
-      }
-      clearTimeout(timeout);
-      window.removeEventListener("message", onMessage);
-      if (!data.ok) {
-        reject(new Error(data.error && data.error.message ? data.error.message : "Bridge request failed."));
-        return;
-      }
-      resolve(data.result);
-    }
-
-    window.addEventListener("message", onMessage);
-    window.postMessage(message, "*");
-  });
-}
-
-async function runBookmarklet({ name, version, extendedDescription, settings, run }) {
-  const executionId = crypto.randomUUID ? crypto.randomUUID() : "execution-" + String(Date.now());
-  await bridgeSend({
-    namespace: BRIDGE_NAMESPACE,
-    version: BRIDGE_VERSION,
-    kind: "register",
-    requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-register",
-    executionId,
-    bookmarklet: {
-      name,
-      version,
-      source: run.toString(),
-      extendedDescription,
-      settings
-    }
-  });
-
-  const bridge = {
-    post(url, body, options = {}) {
-      return bridgeSend({
-        namespace: BRIDGE_NAMESPACE,
-        version: BRIDGE_VERSION,
-        kind: "action",
-        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-post",
-        executionId,
-        action: "post",
-        payload: {
-          url,
-          body,
-          headers: options.headers
-        }
-      });
-    },
-    get(url, options = {}) {
-      return bridgeSend({
-        namespace: BRIDGE_NAMESPACE,
-        version: BRIDGE_VERSION,
-        kind: "action",
-        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-get",
-        executionId,
-        action: "get",
-        payload: {
-          url,
-          headers: options.headers
-        }
-      });
-    },
-    toast(message, options = {}) {
-      return bridgeSend({
-        namespace: BRIDGE_NAMESPACE,
-        version: BRIDGE_VERSION,
-        kind: "action",
-        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-toast",
-        executionId,
-        action: "toast",
-        payload: {
-          message,
-          variant: options.variant,
-          durationMs: options.durationMs
-        }
-      });
-    },
-    download(options) {
-      return bridgeSend({
-        namespace: BRIDGE_NAMESPACE,
-        version: BRIDGE_VERSION,
-        kind: "action",
-        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-download",
-        executionId,
-        action: "download",
-        payload: {
-          filename: options.filename,
-          content: options.content,
-          bytesBase64: options.bytesBase64,
-          mimeType: options.mimeType
-        }
-      });
-    },
-    downloadUrl(options) {
-      return bridgeSend({
-        namespace: BRIDGE_NAMESPACE,
-        version: BRIDGE_VERSION,
-        kind: "action",
-        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-download-url",
-        executionId,
-        action: "downloadUrl",
-        payload: {
-          url: options.url,
-          filename: options.filename
-        }
-      });
-    },
-    copyText(text) {
-      return bridgeSend({
-        namespace: BRIDGE_NAMESPACE,
-        version: BRIDGE_VERSION,
-        kind: "action",
-        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-copy-text",
-        executionId,
-        action: "copyText",
-        payload: {
-          text
-        }
-      });
-    },
-    getSettings() {
-      return bridgeSend({
-        namespace: BRIDGE_NAMESPACE,
-        version: BRIDGE_VERSION,
-        kind: "action",
-        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-get-settings",
-        executionId,
-        action: "getSettings"
-      });
-    }
-  };
-
-  return run(bridge);
-}`;
-}
-
 function bindGeneratorEvents(): void {
   const nameInput = document.getElementById("genName") as HTMLInputElement | null;
   const versionInput = document.getElementById("genVersion") as HTMLInputElement | null;
   const extendedDescriptionInput = document.getElementById("genExtendedDescription") as HTMLTextAreaElement | null;
+  const settingsTextInput = document.getElementById("genSettingsText") as HTMLTextAreaElement | null;
   const runBodyInput = document.getElementById("genRunBody") as HTMLTextAreaElement | null;
 
-  [nameInput, versionInput, extendedDescriptionInput, runBodyInput].forEach((input) => {
+  [nameInput, versionInput, extendedDescriptionInput, settingsTextInput, runBodyInput].forEach((input) => {
     input?.addEventListener("input", () => {
       syncGeneratorDraftFromDom();
     });
@@ -954,12 +1156,20 @@ function bindGeneratorEvents(): void {
 
   document.getElementById("resetGeneratorDraft")?.addEventListener("click", () => {
     generatorDraft = { ...defaultGeneratorDraft };
+    generatorFormatStatus = null;
     persistGeneratorDraft();
     render();
   });
 
   document.getElementById("generateBookmarklet")?.addEventListener("click", () => {
     syncGeneratorDraftFromDom();
+    generatorFormatStatus = null;
+    render();
+  });
+
+  document.getElementById("prettyPrintGenerator")?.addEventListener("click", () => {
+    syncGeneratorDraftFromDom();
+    formatGeneratorDraft();
     render();
   });
 
@@ -993,6 +1203,8 @@ function loadGeneratorDraft(): GeneratorDraft {
           : defaultGeneratorDraft.version,
       extendedDescription:
         typeof parsed.extendedDescription === "string" ? parsed.extendedDescription : defaultGeneratorDraft.extendedDescription,
+      settingsText:
+        typeof parsed.settingsText === "string" ? parsed.settingsText : defaultGeneratorDraft.settingsText,
       runBody: typeof parsed.runBody === "string" && parsed.runBody ? parsed.runBody : defaultGeneratorDraft.runBody
     };
   } catch {
@@ -1008,27 +1220,61 @@ function syncGeneratorDraftFromDom(): void {
   const name = (document.getElementById("genName") as HTMLInputElement | null)?.value.trim();
   const versionValue = Number((document.getElementById("genVersion") as HTMLInputElement | null)?.value);
   const extendedDescription = (document.getElementById("genExtendedDescription") as HTMLTextAreaElement | null)?.value ?? "";
+  const settingsText = (document.getElementById("genSettingsText") as HTMLTextAreaElement | null)?.value ?? "";
   const runBody = (document.getElementById("genRunBody") as HTMLTextAreaElement | null)?.value ?? "";
 
   generatorDraft = {
     name: name || defaultGeneratorDraft.name,
     version: Number.isFinite(versionValue) && versionValue > 0 ? Math.floor(versionValue) : defaultGeneratorDraft.version,
     extendedDescription,
+    settingsText,
     runBody
   };
   persistGeneratorDraft();
 }
 
-function buildGeneratorOutput(draft: GeneratorDraft): GeneratorBuildResult {
-  const helperSource = buildHelperSource();
-  const runSource = `async run(bridge) {\n${indentBlock(draft.runBody, 2)}\n}`;
-  const fullSource = `(function () {\n${indentBlock(helperSource, 2)}\n\n  runBookmarklet({\n    name: ${JSON.stringify(draft.name)},\n    version: ${draft.version},\n    extendedDescription: ${JSON.stringify(draft.extendedDescription)},\n    ${runSource.replaceAll("\n", "\n    ")}\n  });\n})();`;
-  return {
-    runSource,
-    fullSource,
-    bookmarkletUrl: `javascript:${encodeURIComponent(fullSource)}`,
-    error: null
+function writeGeneratorDraftToDom(): void {
+  const nameInput = document.getElementById("genName") as HTMLInputElement | null;
+  const versionInput = document.getElementById("genVersion") as HTMLInputElement | null;
+  const extendedDescriptionInput = document.getElementById("genExtendedDescription") as HTMLTextAreaElement | null;
+  const settingsTextInput = document.getElementById("genSettingsText") as HTMLTextAreaElement | null;
+  const runBodyInput = document.getElementById("genRunBody") as HTMLTextAreaElement | null;
+
+  if (nameInput) {
+    nameInput.value = generatorDraft.name;
+  }
+  if (versionInput) {
+    versionInput.value = String(generatorDraft.version);
+  }
+  if (extendedDescriptionInput) {
+    extendedDescriptionInput.value = generatorDraft.extendedDescription;
+  }
+  if (settingsTextInput) {
+    settingsTextInput.value = generatorDraft.settingsText;
+  }
+  if (runBodyInput) {
+    runBodyInput.value = generatorDraft.runBody;
+  }
+}
+
+function formatGeneratorDraft(): void {
+  const formattedSettings = formatGeneratorSettingsText(generatorDraft.settingsText);
+  generatorDraft = {
+    ...generatorDraft,
+    settingsText: formattedSettings.text,
+    runBody: formatGeneratorJavaScript(generatorDraft.runBody)
   };
+  persistGeneratorDraft();
+  writeGeneratorDraftToDom();
+  generatorFormatStatus = formattedSettings.error
+    ? {
+        tone: "error",
+        message: `Pretty print formatted JavaScript but could not format settings JSON: ${formattedSettings.error}`
+      }
+    : {
+        tone: "success",
+        message: "Pretty print updated the JavaScript and settings JSON."
+      };
 }
 
 function buildSnippet(snippet: GeneratorSnippet): string {
@@ -1062,14 +1308,6 @@ function insertIntoGenerator(snippet: string): void {
   textarea.setRangeText(`${prefix}${snippet}${suffix}`, start, end, "end");
   textarea.focus();
   syncGeneratorDraftFromDom();
-}
-
-function indentBlock(value: string, spaces: number): string {
-  const prefix = " ".repeat(spaces);
-  return value
-    .split("\n")
-    .map((line) => (line ? `${prefix}${line}` : line))
-    .join("\n");
 }
 
 async function refresh(): Promise<void> {
