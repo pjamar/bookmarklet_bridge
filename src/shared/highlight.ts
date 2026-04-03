@@ -26,6 +26,7 @@ export const HIGHLIGHT_THEME = `
   .hljs-number,
   .hljs-literal,
   .hljs-variable,
+  .hljs-variable.language_,
   .hljs-template-variable,
   .hljs-tag .hljs-attr {
     color: #7a4b00;
@@ -35,16 +36,23 @@ export const HIGHLIGHT_THEME = `
     color: #116149;
   }
   .hljs-title,
+  .hljs-title.function_,
+  .hljs-function,
   .hljs-section,
   .hljs-selector-id {
     color: #184e8a;
     font-weight: 700;
   }
+  .hljs-property,
   .hljs-attr,
   .hljs-attribute,
   .hljs-name,
   .hljs-type {
     color: #5f3dc4;
+  }
+  .hljs-punctuation,
+  .hljs-operator {
+    color: #6a6258;
   }
   .hljs-built_in,
   .hljs-bullet,
