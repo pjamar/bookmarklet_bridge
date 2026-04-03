@@ -562,7 +562,7 @@ console.log(result);`
     </section>
     <section class="panel">
       <h3>Bookmarklet URL</h3>
-      <pre><code id="generatorBookmarklet">${escapeHtml(buildResult.bookmarkletUrl)}</code></pre>
+      <pre><code id="generatorBookmarklet" data-highlight="javascript">${escapeHtml(buildResult.bookmarkletUrl)}</code></pre>
     </section>
   `;
 }

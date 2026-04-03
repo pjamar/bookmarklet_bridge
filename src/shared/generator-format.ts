@@ -231,10 +231,18 @@ export function formatGeneratorJavaScript(sourceText: string): string {
     const next = source[index + 1] ?? "";
 
     if (/\s/.test(current)) {
-      if (current === "\n") {
+      let cursor = index;
+      let sawNewline = false;
+      while (cursor < source.length && /\s/.test(source[cursor] ?? "")) {
+        if (source[cursor] === "\n") {
+          sawNewline = true;
+        }
+        cursor += 1;
+      }
+      if (sawNewline && previousTokenEnd !== "\n" && !atLineStart) {
         newline();
       }
-      index += 1;
+      index = cursor;
       continue;
     }
 

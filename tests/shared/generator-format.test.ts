@@ -53,6 +53,15 @@ if(result) {
     expect(result).toContain('async run(bridge) {\n      await bridge.toast("ok");\n    }');
     expect(result).toContain("\n  });\n})();");
   });
+
+  test("does not insert blank lines between already separated statements", () => {
+    const result = formatGeneratorJavaScript(`const first = 1;
+const second = 2;
+await bridge.toast("ok");`);
+
+    expect(result).not.toContain("\n\n");
+    expect(result).toContain("const first=1;\nconst second=2;\nawait bridge.toast(\"ok\");");
+  });
 });
 
 describe("compactJavaScript", () => {
