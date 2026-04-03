@@ -1,5 +1,6 @@
 import { INTERNAL_MESSAGE_KIND } from "../shared/constants";
 import { HIGHLIGHT_THEME, highlightIntoElement } from "../shared/highlight";
+import { renderMarkdown } from "../shared/markdown";
 import type { BridgeSettings, BridgeState, ExecutionLogEntry, PolicyEntry } from "../shared/types";
 
 type ViewName = "settings" | "approved" | "denied" | "log" | "generator";
@@ -8,6 +9,7 @@ type GeneratorSnippet = "toast" | "get" | "post" | "download" | "downloadUrl" | 
 interface GeneratorDraft {
   name: string;
   version: number;
+  extendedDescription: string;
   runBody: string;
 }
 
@@ -33,6 +35,7 @@ const GENERATOR_DRAFT_STORAGE_KEY = "bookmarklet-bridge.generator-draft";
 const defaultGeneratorDraft: GeneratorDraft = {
   name: "My Bookmarklet",
   version: 1,
+  extendedDescription: "",
   runBody: `const selection = window.getSelection ? String(window.getSelection()).trim() : "";
 const title = document.title || "Untitled";
 
@@ -222,6 +225,14 @@ function renderPolicyDetail(policy: PolicyEntry): string {
         </div>
       </div>
     </section>
+    ${
+      policy.extendedDescription
+        ? `<section class="panel">
+      <h3>Extended Description</h3>
+      <div class="markdown-body">${renderMarkdown(policy.extendedDescription)}</div>
+    </section>`
+        : ""
+    }
     <section class="panel">
       <h3>Readable Source</h3>
       <pre><code data-highlight="javascript">${escapeHtml(policy.decodedSource)}</code></pre>
@@ -248,6 +259,10 @@ function renderGenerator(): string {
           <label><div>Name</div><input id="genName" value="${escapeAttr(generatorDraft.name)}" /></label>
           <label><div>Version</div><input id="genVersion" type="number" value="${generatorDraft.version}" min="1" step="1" /></label>
         </div>
+        <label>
+          <div>Extended Description (Markdown)</div>
+          <textarea id="genExtendedDescription" spellcheck="false">${escapeHtml(generatorDraft.extendedDescription)}</textarea>
+        </label>
         <label>
           <div>run(bridge) body</div>
           <textarea id="genRunBody" class="editor" spellcheck="false">${escapeHtml(generatorDraft.runBody)}</textarea>
@@ -556,7 +571,7 @@ function bridgeSend(message) {
   });
 }
 
-async function runBookmarklet({ name, version, run }) {
+async function runBookmarklet({ name, version, extendedDescription, run }) {
   const executionId = crypto.randomUUID ? crypto.randomUUID() : "execution-" + String(Date.now());
   await bridgeSend({
     namespace: BRIDGE_NAMESPACE,
@@ -567,7 +582,8 @@ async function runBookmarklet({ name, version, run }) {
     bookmarklet: {
       name,
       version,
-      source: run.toString()
+      source: run.toString(),
+      extendedDescription
     }
   });
 
@@ -668,9 +684,10 @@ async function runBookmarklet({ name, version, run }) {
 function bindGeneratorEvents(): void {
   const nameInput = document.getElementById("genName") as HTMLInputElement | null;
   const versionInput = document.getElementById("genVersion") as HTMLInputElement | null;
+  const extendedDescriptionInput = document.getElementById("genExtendedDescription") as HTMLTextAreaElement | null;
   const runBodyInput = document.getElementById("genRunBody") as HTMLTextAreaElement | null;
 
-  [nameInput, versionInput, runBodyInput].forEach((input) => {
+  [nameInput, versionInput, extendedDescriptionInput, runBodyInput].forEach((input) => {
     input?.addEventListener("input", () => {
       syncGeneratorDraftFromDom();
     });
@@ -722,6 +739,8 @@ function loadGeneratorDraft(): GeneratorDraft {
         typeof parsed.version === "number" && Number.isFinite(parsed.version) && parsed.version > 0
           ? Math.floor(parsed.version)
           : defaultGeneratorDraft.version,
+      extendedDescription:
+        typeof parsed.extendedDescription === "string" ? parsed.extendedDescription : defaultGeneratorDraft.extendedDescription,
       runBody: typeof parsed.runBody === "string" && parsed.runBody ? parsed.runBody : defaultGeneratorDraft.runBody
     };
   } catch {
@@ -736,11 +755,13 @@ function persistGeneratorDraft(): void {
 function syncGeneratorDraftFromDom(): void {
   const name = (document.getElementById("genName") as HTMLInputElement | null)?.value.trim();
   const versionValue = Number((document.getElementById("genVersion") as HTMLInputElement | null)?.value);
+  const extendedDescription = (document.getElementById("genExtendedDescription") as HTMLTextAreaElement | null)?.value ?? "";
   const runBody = (document.getElementById("genRunBody") as HTMLTextAreaElement | null)?.value ?? "";
 
   generatorDraft = {
     name: name || defaultGeneratorDraft.name,
     version: Number.isFinite(versionValue) && versionValue > 0 ? Math.floor(versionValue) : defaultGeneratorDraft.version,
+    extendedDescription,
     runBody
   };
   persistGeneratorDraft();
@@ -749,7 +770,7 @@ function syncGeneratorDraftFromDom(): void {
 function buildGeneratorOutput(draft: GeneratorDraft): GeneratorBuildResult {
   const helperSource = buildHelperSource();
   const runSource = `async run(bridge) {\n${indentBlock(draft.runBody, 2)}\n}`;
-  const fullSource = `(function () {\n${indentBlock(helperSource, 2)}\n\n  runBookmarklet({\n    name: ${JSON.stringify(draft.name)},\n    version: ${draft.version},\n    ${runSource.replaceAll("\n", "\n    ")}\n  });\n})();`;
+  const fullSource = `(function () {\n${indentBlock(helperSource, 2)}\n\n  runBookmarklet({\n    name: ${JSON.stringify(draft.name)},\n    version: ${draft.version},\n    extendedDescription: ${JSON.stringify(draft.extendedDescription)},\n    ${runSource.replaceAll("\n", "\n    ")}\n  });\n})();`;
   return {
     runSource,
     fullSource,

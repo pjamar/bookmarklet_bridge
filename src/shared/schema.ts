@@ -87,10 +87,18 @@ function parseBookmarklet(value: unknown): BookmarkletRegistration {
   if (!isPlainObject(value)) {
     throw new BridgeError("invalid_request", "bookmarklet must be a plain object.");
   }
+  const extendedDescription = value.extendedDescription;
+  if (
+    extendedDescription !== undefined &&
+    (typeof extendedDescription !== "string" || !extendedDescription.trim())
+  ) {
+    throw new BridgeError("invalid_request", "bookmarklet.extendedDescription must be a non-empty string.");
+  }
   return {
     name: requireString(value.name, "bookmarklet.name"),
     version: requireNumber(value.version, "bookmarklet.version"),
-    source: requireString(value.source, "bookmarklet.source")
+    source: requireString(value.source, "bookmarklet.source"),
+    extendedDescription: extendedDescription as string | undefined
   };
 }
 

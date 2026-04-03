@@ -21,7 +21,8 @@ describe("parseBridgeMessage", () => {
         bookmarklet: {
           name: "Example",
           version: 1,
-          source: "async function run() {}"
+          source: "async function run() {}",
+          extendedDescription: "## What it does\n\n- Saves text"
         }
       })
     ).toEqual({
@@ -33,9 +34,28 @@ describe("parseBridgeMessage", () => {
       bookmarklet: {
         name: "Example",
         version: 1,
-        source: "async function run() {}"
+        source: "async function run() {}",
+        extendedDescription: "## What it does\n\n- Saves text"
       }
     });
+  });
+
+  test("rejects blank bookmarklet extended descriptions", () => {
+    expect(() =>
+      parseBridgeMessage({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "register",
+        requestId: "req-extended-description",
+        executionId: "exec-1",
+        bookmarklet: {
+          name: "Example",
+          version: 1,
+          source: "async function run() {}",
+          extendedDescription: "   "
+        }
+      })
+    ).toThrowError(new BridgeError("invalid_request", "bookmarklet.extendedDescription must be a non-empty string."));
   });
 
   test("rejects messages with the wrong namespace", () => {

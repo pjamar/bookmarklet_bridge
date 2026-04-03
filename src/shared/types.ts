@@ -10,6 +10,7 @@ export interface BookmarkletRegistration {
   name: string;
   version: number;
   source: string;
+  extendedDescription?: string;
 }
 
 export interface RegisterMessage {
@@ -144,6 +145,7 @@ export interface PolicyEntry {
   canonicalBookmarklet: string;
   name: string;
   version: number;
+  extendedDescription?: string;
   decision: "allow" | "deny";
   inferredActions: BridgeAction[];
   decodedSource: string;

@@ -33,6 +33,7 @@ export async function applyApprovalDecision(
     canonicalBookmarklet: identity.canonicalBookmarklet,
     name: bookmarklet.name,
     version: bookmarklet.version,
+    extendedDescription: bookmarklet.extendedDescription,
     decision,
     inferredActions: identity.inferredActions,
     decodedSource: identity.decodedSource,

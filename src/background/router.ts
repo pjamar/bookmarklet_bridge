@@ -172,7 +172,8 @@ async function handleRegisterMessage(
         approval: identity,
         bookmarklet: {
           name: message.bookmarklet.name,
-          version: message.bookmarklet.version
+          version: message.bookmarklet.version,
+          extendedDescription: message.bookmarklet.extendedDescription
         }
       }
     );

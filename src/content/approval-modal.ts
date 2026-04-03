@@ -1,5 +1,6 @@
 import { APPROVAL_DECISIONS, APPROVAL_HOST_ID, INTERNAL_MESSAGE_KIND } from "../shared/constants";
 import { HIGHLIGHT_THEME, highlightIntoElement } from "../shared/highlight";
+import { renderMarkdown } from "../shared/markdown";
 import type { ApprovalDecision, BridgeResponse, RegisterMessage } from "../shared/types";
 
 interface ApprovalPromptInput {
@@ -82,6 +83,26 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
         color: white;
       }
       button[data-decision="deny"] { background: #7b2d26; }
+      .markdown {
+        margin: 0 0 16px;
+        padding: 12px 14px;
+        border: 1px solid #d8ccb9;
+        border-radius: 10px;
+        background: #fffdf8;
+      }
+      .markdown :is(h1, h2, h3) { margin: 0 0 10px; }
+      .markdown p { margin: 0 0 10px; }
+      .markdown ul { margin: 0 0 10px 18px; padding: 0; }
+      .markdown blockquote {
+        margin: 0 0 10px;
+        padding-left: 12px;
+        border-left: 3px solid #cabaa3;
+        color: #4d473f;
+      }
+      .markdown pre {
+        margin: 0 0 10px;
+      }
+      .markdown a { color: #1f4b74; }
       ${HIGHLIGHT_THEME}
     `;
 
@@ -94,6 +115,14 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
 
     const intro = document.createElement("p");
     intro.textContent = "This bookmarklet wants to use Bookmarklet Bridge.";
+
+    const extendedDescription = String(bookmarklet.extendedDescription ?? "");
+    const descriptionBlock =
+      extendedDescription.trim().length > 0 ? document.createElement("section") : null;
+    if (descriptionBlock) {
+      descriptionBlock.className = "markdown";
+      descriptionBlock.innerHTML = renderMarkdown(extendedDescription);
+    }
 
     const meta = document.createElement("div");
     meta.className = "meta";
@@ -129,7 +158,11 @@ export async function promptForApproval(input: ApprovalPromptInput): Promise<Bri
     const actions = document.createElement("div");
     actions.className = "actions";
 
-    panel.append(heading, intro, meta, sourceLabel, pre, actions);
+    panel.append(heading, intro);
+    if (descriptionBlock) {
+      panel.append(descriptionBlock);
+    }
+    panel.append(meta, sourceLabel, pre, actions);
 
     panel.querySelectorAll<HTMLElement>("[data-highlight]").forEach((element) => {
       highlightIntoElement(element, "javascript");
