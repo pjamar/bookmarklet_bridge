@@ -119,6 +119,9 @@ Type-specific fields:
 - optional `multiline: boolean`
 - optional `maxLength: number`
 
+No field-specific semantic validation should be added in V1.
+In particular, `text` should remain plain text without URL, email, pattern, or trimming rules beyond basic type validation.
+
 ### `integer`
 
 - `default: number`
@@ -157,6 +160,9 @@ The storage should be split into two concepts:
 1. declared schema for a bookmarklet definition
 2. current user-chosen values for that definition
 
+Both are scoped strictly to `definitionHash`.
+V1 should not attempt continuity across different bookmarklet definitions, even when they look like upgrades of the same bookmarklet.
+
 Suggested keys:
 
 - schema keyed by `definitionHash`
@@ -192,7 +198,8 @@ The settings schema explains what can be configured.
 
 ## Options / Management UI Behavior
 
-The bookmarklet detail view for approved and denied entries should gain a settings section.
+The bookmarklet detail view for approved entries should gain a settings section.
+Denied entries should not expose editable settings controls in V1.
 
 For each field, show:
 
@@ -230,6 +237,9 @@ The extension should reject settings schemas that:
 - provide empty option lists
 - use defaults not present in option lists
 
+The extension should not add extra semantic validation beyond schema shape and simple type compatibility in V1.
+For example, text fields should not enforce URL formats, regexes, normalization rules, or domain-specific constraints.
+
 ### Value Validation
 
 Values loaded from storage must be normalized against the schema:
@@ -258,8 +268,10 @@ When a bookmarklet changes version or source, it may already trigger a new appro
 Within that model, settings migration can stay simple:
 
 - new bookmarklet definition gets its own schema
-- values start from defaults unless explicitly migrated later
+- new `definitionHash` gets its own values
+- values start from defaults
 
+V1 should not migrate settings across hashes.
 If the project later wants continuity across versions, that should be a separate migration feature, not hidden inside V1.
 
 ## Logging
