@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { BRIDGE_NAMESPACE, BRIDGE_VERSION, MAX_DOWNLOAD_BYTES, MAX_HEADERS } from "../../src/shared/constants";
+import {
+  BRIDGE_NAMESPACE,
+  BRIDGE_VERSION,
+  MAX_CLIPBOARD_TEXT_BYTES,
+  MAX_DOWNLOAD_BYTES,
+  MAX_HEADERS
+} from "../../src/shared/constants";
 import { BridgeError } from "../../src/shared/errors";
 import { parseBridgeMessage } from "../../src/shared/schema";
 
@@ -149,6 +155,48 @@ describe("parseBridgeMessage", () => {
         }
       })
     ).toThrowError(new BridgeError("payload_too_large", "payload.content is too large."));
+  });
+
+  test("accepts a valid copyText action", () => {
+    expect(
+      parseBridgeMessage({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: "req-copy",
+        executionId: "exec-1",
+        action: "copyText",
+        payload: {
+          text: "Copied text"
+        }
+      })
+    ).toEqual({
+      namespace: BRIDGE_NAMESPACE,
+      version: BRIDGE_VERSION,
+      kind: "action",
+      requestId: "req-copy",
+      executionId: "exec-1",
+      action: "copyText",
+      payload: {
+        text: "Copied text"
+      }
+    });
+  });
+
+  test("rejects oversized clipboard text", () => {
+    expect(() =>
+      parseBridgeMessage({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: "req-copy-too-large",
+        executionId: "exec-1",
+        action: "copyText",
+        payload: {
+          text: "x".repeat(MAX_CLIPBOARD_TEXT_BYTES + 1)
+        }
+      })
+    ).toThrowError(new BridgeError("payload_too_large", "payload.text is too large."));
   });
 
   test("rejects unsupported actions", () => {
