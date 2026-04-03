@@ -154,7 +154,85 @@ describe("parseBridgeMessage", () => {
           content: "x".repeat(MAX_DOWNLOAD_BYTES + 1)
         }
       })
-    ).toThrowError(new BridgeError("payload_too_large", "payload.content is too large."));
+    ).toThrowError(new BridgeError("payload_too_large", "download payload is too large."));
+  });
+
+  test("accepts a valid binary download action", () => {
+    expect(
+      parseBridgeMessage({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: "req-download-binary",
+        executionId: "exec-1",
+        action: "download",
+        payload: {
+          filename: "pixel.png",
+          bytesBase64: "AQIDBA==",
+          mimeType: "image/png"
+        }
+      })
+    ).toEqual({
+      namespace: BRIDGE_NAMESPACE,
+      version: BRIDGE_VERSION,
+      kind: "action",
+      requestId: "req-download-binary",
+      executionId: "exec-1",
+      action: "download",
+      payload: {
+        filename: "pixel.png",
+        bytesBase64: "AQIDBA==",
+        mimeType: "image/png"
+      }
+    });
+  });
+
+  test("rejects download payloads that specify both text and base64 bytes", () => {
+    expect(() =>
+      parseBridgeMessage({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: "req-download-ambiguous",
+        executionId: "exec-1",
+        action: "download",
+        payload: {
+          filename: "notes.txt",
+          content: "hello",
+          bytesBase64: "aGVsbG8="
+        }
+      })
+    ).toThrowError(
+      new BridgeError("invalid_request", "payload must include exactly one of payload.content or payload.bytesBase64.")
+    );
+  });
+
+  test("accepts a valid downloadUrl action", () => {
+    expect(
+      parseBridgeMessage({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: "req-download-url",
+        executionId: "exec-1",
+        action: "downloadUrl",
+        payload: {
+          url: "https://example.com/files/report.pdf",
+          filename: "report.pdf"
+        }
+      })
+    ).toEqual({
+      namespace: BRIDGE_NAMESPACE,
+      version: BRIDGE_VERSION,
+      kind: "action",
+      requestId: "req-download-url",
+      executionId: "exec-1",
+      action: "downloadUrl",
+      payload: {
+        url: "https://example.com/files/report.pdf",
+        filename: "report.pdf"
+      }
+    });
   });
 
   test("accepts a valid copyText action", () => {

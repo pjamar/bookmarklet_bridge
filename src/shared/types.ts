@@ -48,8 +48,14 @@ export interface ToastPayload {
 
 export interface DownloadPayload {
   filename: string;
-  content: string;
+  content?: string;
+  bytesBase64?: string;
   mimeType?: string;
+}
+
+export interface DownloadUrlPayload {
+  url: string;
+  filename?: string;
 }
 
 export interface ClipboardPayload {
@@ -81,11 +87,17 @@ export interface ClipboardActionMessage extends ActionMessageBase {
   payload: ClipboardPayload;
 }
 
+export interface DownloadUrlActionMessage extends ActionMessageBase {
+  action: "downloadUrl";
+  payload: DownloadUrlPayload;
+}
+
 export type ActionMessage =
   | PostActionMessage
   | GetActionMessage
   | ToastActionMessage
   | DownloadActionMessage
+  | DownloadUrlActionMessage
   | ClipboardActionMessage;
 export type BridgeMessage = RegisterMessage | ActionMessage;
 

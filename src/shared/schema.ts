@@ -20,6 +20,7 @@ import type {
   RegisterMessage,
   ClipboardPayload,
   DownloadPayload,
+  DownloadUrlPayload,
   ToastPayload
 } from "./types";
 
@@ -150,9 +151,19 @@ function parseDownloadPayload(value: unknown): DownloadPayload {
   if (!isPlainObject(value)) {
     throw new BridgeError("invalid_request", "payload must be a plain object.");
   }
-  const content = requireString(value.content, "payload.content");
-  if (new TextEncoder().encode(content).length > MAX_DOWNLOAD_BYTES) {
-    throw new BridgeError("payload_too_large", "payload.content is too large.");
+  const hasContent = value.content !== undefined;
+  const hasBytesBase64 = value.bytesBase64 !== undefined;
+  if (hasContent === hasBytesBase64) {
+    throw new BridgeError("invalid_request", "payload must include exactly one of payload.content or payload.bytesBase64.");
+  }
+  const content = hasContent ? requireString(value.content, "payload.content") : undefined;
+  const bytesBase64 = hasBytesBase64 ? requireString(value.bytesBase64, "payload.bytesBase64") : undefined;
+  const measuredBytes =
+    content !== undefined
+      ? new TextEncoder().encode(content).length
+      : estimateBase64ByteLength(bytesBase64 as string);
+  if (measuredBytes > MAX_DOWNLOAD_BYTES) {
+    throw new BridgeError("payload_too_large", "download payload is too large.");
   }
   const mimeType = value.mimeType;
   if (mimeType !== undefined && typeof mimeType !== "string") {
@@ -161,7 +172,30 @@ function parseDownloadPayload(value: unknown): DownloadPayload {
   return {
     filename: requireString(value.filename, "payload.filename"),
     content,
+    bytesBase64,
     mimeType: mimeType as string | undefined
+  };
+}
+
+function estimateBase64ByteLength(value: string): number {
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(value) || value.length % 4 !== 0) {
+    throw new BridgeError("invalid_request", "payload.bytesBase64 must be valid base64.");
+  }
+  const padding = value.endsWith("==") ? 2 : value.endsWith("=") ? 1 : 0;
+  return (value.length / 4) * 3 - padding;
+}
+
+function parseDownloadUrlPayload(value: unknown): DownloadUrlPayload {
+  if (!isPlainObject(value)) {
+    throw new BridgeError("invalid_request", "payload must be a plain object.");
+  }
+  const filename = value.filename;
+  if (filename !== undefined && (typeof filename !== "string" || !filename.trim())) {
+    throw new BridgeError("invalid_request", "payload.filename must be a non-empty string.");
+  }
+  return {
+    url: requireString(value.url, "payload.url"),
+    filename: filename as string | undefined
   };
 }
 
@@ -199,6 +233,8 @@ function parseActionMessage(value: Record<string, unknown>): ActionMessage {
       return { ...base, action, payload: parseToastPayload(value.payload) };
     case "download":
       return { ...base, action, payload: parseDownloadPayload(value.payload) };
+    case "downloadUrl":
+      return { ...base, action, payload: parseDownloadUrlPayload(value.payload) };
     case "copyText":
       return { ...base, action, payload: parseClipboardPayload(value.payload) };
   }

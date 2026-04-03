@@ -30,13 +30,14 @@ describe("buildIdentity", () => {
           await bridge.get("https://example.com/get");
           await bridge.toast("Done");
           await bridge.download({ filename: "notes.md", content: "ok" });
+          await bridge.downloadUrl({ url: "https://example.com/files/report.pdf" });
           await bridge.copyText("Copied");
           await bridge.get("https://example.com/again");
         }
       `
     });
 
-    expect(identity.inferredActions).toEqual(["post", "get", "toast", "download", "copyText"]);
+    expect(identity.inferredActions).toEqual(["post", "get", "toast", "download", "downloadUrl", "copyText"]);
   });
 
   test("does not infer actions from similarly named identifiers", async () => {

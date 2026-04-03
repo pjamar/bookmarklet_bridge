@@ -1,7 +1,7 @@
 import { BridgeError } from "../../shared/errors";
 import type { BridgeSettings, GetPayload, JsonValue, PostPayload } from "../../shared/types";
 
-function validateOrigin(url: URL, allowedOrigins: string[]): void {
+export function validateOrigin(url: URL, allowedOrigins: string[]): void {
   if (allowedOrigins.length > 0 && !allowedOrigins.includes(url.origin)) {
     throw new BridgeError("origin_not_allowed", `Origin ${url.origin} is not allowed by extension settings.`);
   }

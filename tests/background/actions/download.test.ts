@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { BridgeError } from "../../../src/shared/errors";
-import { handleDownload } from "../../../src/background/actions/download";
+import { handleDownload, handleDownloadUrl } from "../../../src/background/actions/download";
 
 const downloadMock = vi.fn();
 const createObjectUrlMock = vi.fn();
 const revokeObjectUrlMock = vi.fn();
+const NativeURL = URL;
 
 vi.stubGlobal("browser", {
   downloads: {
@@ -12,10 +13,12 @@ vi.stubGlobal("browser", {
   }
 });
 
-vi.stubGlobal("URL", {
-  createObjectURL: createObjectUrlMock,
-  revokeObjectURL: revokeObjectUrlMock
-});
+class TestURL extends NativeURL {
+  static createObjectURL = createObjectUrlMock;
+  static revokeObjectURL = revokeObjectUrlMock;
+}
+
+vi.stubGlobal("URL", TestURL);
 
 afterEach(() => {
   downloadMock.mockReset();
@@ -92,5 +95,93 @@ describe("handleDownload", () => {
         }
       })
     ).rejects.toThrowError(new BridgeError("download_failed", "The browser could not start the download."));
+  });
+
+  test("accepts base64 bytes for binary downloads", async () => {
+    createObjectUrlMock.mockReturnValue("blob:download-url");
+    downloadMock.mockResolvedValue(21);
+
+    const result = await handleDownload({
+      namespace: "bookmarklet-bridge",
+      version: 2,
+      kind: "action",
+      requestId: "req-4",
+      executionId: "exec-1",
+      action: "download",
+      payload: {
+        filename: "pixel.png",
+        bytesBase64: "AQIDBA==",
+        mimeType: "image/png"
+      }
+    });
+
+    expect(result).toEqual({
+      downloadId: 21,
+      filename: "pixel.png",
+      mimeType: "image/png;charset=utf-8",
+      sizeBytes: 4
+    });
+  });
+});
+
+describe("handleDownloadUrl", () => {
+  test("starts a browser-managed download from a URL", async () => {
+    downloadMock.mockResolvedValue(31);
+
+    const result = await handleDownloadUrl(
+      {
+        namespace: "bookmarklet-bridge",
+        version: 2,
+        kind: "action",
+        requestId: "req-5",
+        executionId: "exec-1",
+        action: "downloadUrl",
+        payload: {
+          url: "https://example.com/files/report.pdf",
+          filename: "report.pdf"
+        }
+      },
+      {
+        allowedOrigins: [],
+        requestDefaults: { timeoutMs: 10000 },
+        toastDefaults: { durationMs: 2200 }
+      }
+    );
+
+    expect(downloadMock).toHaveBeenCalledWith({
+      url: "https://example.com/files/report.pdf",
+      filename: "report.pdf",
+      conflictAction: "uniquify"
+    });
+    expect(result).toEqual({
+      downloadId: 31,
+      url: "https://example.com/files/report.pdf",
+      filename: "report.pdf"
+    });
+  });
+
+  test("applies allowed origin checks to download URLs", async () => {
+    await expect(
+      handleDownloadUrl(
+        {
+          namespace: "bookmarklet-bridge",
+          version: 2,
+          kind: "action",
+          requestId: "req-6",
+          executionId: "exec-1",
+          action: "downloadUrl",
+          payload: {
+            url: "https://blocked.example.com/file.bin"
+          }
+        },
+        {
+          allowedOrigins: ["https://example.com"],
+          requestDefaults: { timeoutMs: 10000 },
+          toastDefaults: { durationMs: 2200 }
+        }
+      )
+    ).rejects.toThrowError(
+      new BridgeError("origin_not_allowed", "Origin https://blocked.example.com is not allowed by extension settings.")
+    );
   });
 });

@@ -28,6 +28,6 @@ export const INTERNAL_MESSAGE_KIND = {
   CLEAR_LOGS: "clear_logs"
 } as const;
 
-export const ACTIONS = ["post", "get", "toast", "download", "copyText"] as const;
+export const ACTIONS = ["post", "get", "toast", "download", "downloadUrl", "copyText"] as const;
 export const TOAST_VARIANTS = ["success", "info", "error"] as const;
 export const APPROVAL_DECISIONS = ["allow", "deny"] as const;

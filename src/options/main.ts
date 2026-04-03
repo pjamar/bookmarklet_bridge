@@ -3,7 +3,7 @@ import { HIGHLIGHT_THEME, highlightIntoElement } from "../shared/highlight";
 import type { BridgeSettings, BridgeState, ExecutionLogEntry, PolicyEntry } from "../shared/types";
 
 type ViewName = "settings" | "approved" | "denied" | "log" | "generator";
-type GeneratorSnippet = "toast" | "get" | "post" | "download" | "copyText" | "tryCatch";
+type GeneratorSnippet = "toast" | "get" | "post" | "download" | "downloadUrl" | "copyText" | "tryCatch";
 
 interface GeneratorDraft {
   name: string;
@@ -257,6 +257,7 @@ function renderGenerator(): string {
           <button id="generatorSnippetGet" class="button inline pastel-sky" data-snippet="get">Insert GET</button>
           <button id="generatorSnippetPost" class="button inline pastel-peach" data-snippet="post">Insert POST</button>
           <button id="generatorSnippetDownload" class="button inline pastel-gold" data-snippet="download">Insert download</button>
+          <button id="generatorSnippetDownloadUrl" class="button inline pastel-peach" data-snippet="downloadUrl">Insert downloadUrl</button>
           <button id="generatorSnippetCopyText" class="button inline pastel-blue" data-snippet="copyText">Insert copyText</button>
           <button id="generatorSnippetTryCatch" class="button inline pastel-lilac" data-snippet="tryCatch">Insert try/catch</button>
         </div>
@@ -300,11 +301,19 @@ console.log(result);`
         )}
         ${renderGeneratorActionDoc(
           "bridge.download({ filename, content, mimeType? })",
-          "Save generated text content through the browser download manager. Filenames are sanitized and contents are not logged.",
+          "Save generated text or base64-decoded binary content through the browser download manager. Filenames are sanitized and contents are not logged.",
           `await bridge.download({
   filename: "page-notes.md",
   content: "# " + (document.title || "Untitled") + "\\n\\n" + location.href,
   mimeType: "text/markdown"
+});`
+        )}
+        ${renderGeneratorActionDoc(
+          "bridge.downloadUrl({ url, filename? })",
+          "Ask the browser to download a file directly from a URL. Optional filenames are sanitized and origin restrictions follow extension settings.",
+          `await bridge.downloadUrl({
+  url: "https://example.com/files/report.pdf",
+  filename: "report.pdf"
 });`
         )}
         ${renderGeneratorActionDoc(
@@ -618,7 +627,22 @@ async function runBookmarklet({ name, version, run }) {
         payload: {
           filename: options.filename,
           content: options.content,
+          bytesBase64: options.bytesBase64,
           mimeType: options.mimeType
+        }
+      });
+    },
+    downloadUrl(options) {
+      return bridgeSend({
+        namespace: BRIDGE_NAMESPACE,
+        version: BRIDGE_VERSION,
+        kind: "action",
+        requestId: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())) + "-download-url",
+        executionId,
+        action: "downloadUrl",
+        payload: {
+          url: options.url,
+          filename: options.filename
         }
       });
     },
@@ -744,6 +768,8 @@ function buildSnippet(snippet: GeneratorSnippet): string {
       return `const result = await bridge.post("https://example.com/api/items", {\n  title: document.title,\n  url: location.href,\n  selection: window.getSelection ? String(window.getSelection()).trim() : ""\n}, {\n  headers: {\n    "Content-Type": "application/json"\n  }\n});\nconsole.log(result);`;
     case "download":
       return `await bridge.download({\n  filename: "page-notes.md",\n  content: [\n    "# " + (document.title || "Untitled"),\n    "",\n    location.href,\n    "",\n    window.getSelection ? String(window.getSelection()).trim() : ""\n  ].join("\\n"),\n  mimeType: "text/markdown"\n});`;
+    case "downloadUrl":
+      return `await bridge.downloadUrl({\n  url: "https://example.com/files/report.pdf",\n  filename: "report.pdf"\n});`;
     case "copyText":
       return `await bridge.copyText([\n  document.title || "Untitled",\n  location.href,\n  "",\n  window.getSelection ? String(window.getSelection()).trim() : ""\n].filter(Boolean).join("\\n"));`;
     case "tryCatch":

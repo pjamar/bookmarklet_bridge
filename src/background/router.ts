@@ -14,7 +14,7 @@ import type {
 import { parseBridgeMessage } from "../shared/schema";
 import { handleGet } from "./actions/get";
 import { handlePost } from "./actions/post";
-import { handleDownload } from "./actions/download";
+import { handleDownload, handleDownloadUrl } from "./actions/download";
 import { handleCopyText } from "./actions/clipboard";
 import { getSettings, saveSettings } from "./config/store";
 import { appendLog, clearLogs, listLogs } from "./log/store";
@@ -113,6 +113,22 @@ async function executeAction(message: ActionMessage, sender: MessageSenderContex
         filename: result.filename,
         sizeBytes: result.sizeBytes,
         mimeType: result.mimeType
+      });
+      return createSuccessResponse(message.requestId, result);
+    }
+    case "downloadUrl": {
+      const result = await handleDownloadUrl(message, settings);
+      await appendLog({
+        id: `${message.requestId}:download-url`,
+        timestamp: new Date().toISOString(),
+        executionId: message.executionId,
+        bookmarkletName: session?.bookmarkletName,
+        bookmarkletVersion: session?.bookmarkletVersion,
+        kind: "action",
+        outcome: "success",
+        action: "downloadUrl",
+        url: result.url,
+        filename: result.filename
       });
       return createSuccessResponse(message.requestId, result);
     }
@@ -286,13 +302,18 @@ export async function wrapInternalMessage(
           action: actionMessage.action,
           url: "url" in actionMessage.payload ? actionMessage.payload.url : undefined,
           text: actionMessage.action === "toast" ? actionMessage.payload.message : undefined,
-          filename: actionMessage.action === "download" ? actionMessage.payload.filename : undefined,
+          filename:
+            actionMessage.action === "download" || actionMessage.action === "downloadUrl"
+              ? actionMessage.payload.filename
+              : undefined,
           mimeType: actionMessage.action === "download" ? actionMessage.payload.mimeType : undefined,
           sizeBytes:
             actionMessage.action === "copyText"
               ? new TextEncoder().encode(actionMessage.payload.text).length
               : actionMessage.action === "download"
-                ? new TextEncoder().encode(actionMessage.payload.content).length
+                ? actionMessage.payload.content !== undefined
+                  ? new TextEncoder().encode(actionMessage.payload.content).length
+                  : undefined
                 : undefined,
           errorCode: error.code
         });
