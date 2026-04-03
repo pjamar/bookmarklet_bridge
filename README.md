@@ -88,6 +88,7 @@ It currently includes:
 - a detailed view of stored bookmarklet source and hashes
 - a recent execution log
 - a generator / IDE for writing the body of `run(bridge)` and producing a bookmarklet URL
+- a packaged static API reference page for bookmarklet developers
 
 That makes it the best place to start when trying to understand what the extension is doing in practice.
 
@@ -131,6 +132,8 @@ npm run build:chrome
 ```
 
 That output is written to `dist/chrome`.
+
+Both browser builds also include a static API reference at `api-reference.html`.
 
 Load it temporarily in Firefox:
 

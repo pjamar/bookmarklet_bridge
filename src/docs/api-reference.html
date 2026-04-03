@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bookmarklet Bridge API Reference</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe6;
+        --paper: rgba(255, 250, 240, 0.94);
+        --ink: #1c1b18;
+        --muted: #625c53;
+        --line: #d1c6b4;
+        --accent: #184e3d;
+        --accent-2: #9e3d1f;
+        --accent-3: #284d86;
+        --code: #fffdf8;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at top left, rgba(255,255,255,0.7), transparent 28%),
+          linear-gradient(180deg, #eee6d8 0%, var(--bg) 100%);
+        color: var(--ink);
+        font: 15px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      a { color: var(--accent-3); }
+      .layout {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      aside {
+        position: sticky;
+        top: 0;
+        align-self: start;
+        height: 100vh;
+        overflow: auto;
+        padding: 28px 22px;
+        border-right: 1px solid var(--line);
+        background: rgba(248, 242, 231, 0.82);
+        backdrop-filter: blur(6px);
+      }
+      main {
+        padding: 28px;
+        max-width: 980px;
+      }
+      h1, h2, h3 { line-height: 1.2; }
+      h1 { margin: 0 0 8px; font-size: 30px; }
+      h2 {
+        margin: 0 0 14px;
+        font-size: 24px;
+        color: var(--accent);
+      }
+      h3 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+      p { margin: 0 0 14px; }
+      .muted { color: var(--muted); }
+      .title-note {
+        margin-bottom: 18px;
+        color: var(--muted);
+      }
+      .section {
+        margin-bottom: 22px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--paper);
+        box-shadow: 0 10px 26px rgba(52, 44, 28, 0.05);
+      }
+      .hero {
+        background:
+          linear-gradient(135deg, rgba(24, 78, 61, 0.08), rgba(158, 61, 31, 0.08)),
+          var(--paper);
+      }
+      .signature {
+        display: inline-block;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #edf6f2;
+        border: 1px solid #bad8ca;
+        color: var(--accent);
+        font-weight: 700;
+      }
+      nav a {
+        display: block;
+        padding: 10px 12px;
+        margin-bottom: 8px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        text-decoration: none;
+        background: rgba(255,255,255,0.7);
+        color: var(--ink);
+      }
+      nav a:hover {
+        border-color: var(--accent);
+        background: #f5fbf8;
+      }
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .callout {
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,0.72);
+      }
+      .callout strong {
+        color: var(--accent-2);
+      }
+      pre {
+        margin: 0;
+        padding: 14px;
+        overflow: auto;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: var(--code);
+      }
+      code, pre {
+        font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th, td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        color: var(--accent);
+        font-weight: 700;
+      }
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      li + li {
+        margin-top: 6px;
+      }
+      .mini {
+        font-size: 13px;
+      }
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        aside {
+          position: static;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+        main {
+          padding: 18px;
+        }
+        .grid.two {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside>
+        <h1>Bridge API</h1>
+        <p class="title-note">Static reference for bookmarklet authors using Bookmarklet Bridge.</p>
+        <nav>
+          <a href="#overview">Overview</a>
+          <a href="#entry-point">Entry Point</a>
+          <a href="#actions">Actions</a>
+          <a href="#register">Registration</a>
+          <a href="#responses">Responses</a>
+          <a href="#errors">Error Codes</a>
+          <a href="#limits">Limits</a>
+          <a href="#example">Full Example</a>
+        </nav>
+      </aside>
+      <main>
+        <section class="section hero" id="overview">
+          <div class="signature">Bookmarklet Bridge API v2</div>
+          <p style="margin-top:14px;">Bookmarklet Bridge gives bookmarklets a small privileged API for cross-origin requests, page feedback, downloads, and clipboard writes.</p>
+          <div class="grid two" style="margin-top:14px;">
+            <div class="callout">
+              <strong>What the helper hides</strong>
+              <p class="mini">Registration, approval flow, execution IDs, request IDs, and the underlying <code>window.postMessage</code> transport.</p>
+            </div>
+            <div class="callout">
+              <strong>What bookmarklet code should do</strong>
+              <p class="mini">Read the page, prepare a small payload, call one or more bridge methods, and handle errors clearly.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="entry-point">
+          <h2>Entry Point</h2>
+          <p>Bookmarklets are expected to use the generated helper model:</p>
+          <pre><code>runBookmarklet({
+  name: "Example",
+  version: 1,
+  async run(bridge) {
+    await bridge.toast("Running...");
+    const result = await bridge.get("https://example.com/api/me");
+    console.log(result);
+  }
+});</code></pre>
+          <table style="margin-top:14px;">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>name</code></td>
+                <td>string</td>
+                <td>Stable human-readable bookmarklet identifier.</td>
+              </tr>
+              <tr>
+                <td><code>version</code></td>
+                <td>number</td>
+                <td>Integer version for the bookmarklet definition.</td>
+              </tr>
+              <tr>
+                <td><code>run</code></td>
+                <td>async function</td>
+                <td>Receives the <code>bridge</code> API after registration succeeds.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="section" id="actions">
+          <h2>Actions</h2>
+
+          <h3><code>bridge.get(url, options?)</code></h3>
+          <p>Cross-origin GET request executed by the extension.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>url</code></td>
+                <td>string</td>
+                <td>Must be a full URL.</td>
+              </tr>
+              <tr>
+                <td><code>options.headers</code></td>
+                <td>record&lt;string, string&gt;</td>
+                <td>Optional. Some forbidden headers are stripped by the bridge.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="mini muted">Success result: <code>{ status, headers, data }</code> where <code>data</code> is parsed JSON when the response is JSON, otherwise text.</p>
+
+          <h3 style="margin-top:18px;"><code>bridge.post(url, body, options?)</code></h3>
+          <p>Cross-origin JSON POST request executed by the extension.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>url</code></td>
+                <td>string</td>
+                <td>Must be a full URL.</td>
+              </tr>
+              <tr>
+                <td><code>body</code></td>
+                <td>JSON-serializable value</td>
+                <td>Serialized as JSON by the bridge.</td>
+              </tr>
+              <tr>
+                <td><code>options.headers</code></td>
+                <td>record&lt;string, string&gt;</td>
+                <td>Optional extra headers.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="mini muted">Success result: <code>{ status, headers, data }</code>.</p>
+
+          <h3 style="margin-top:18px;"><code>bridge.toast(message, options?)</code></h3>
+          <p>Shows in-page feedback rendered by the extension content script.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>message</code></td>
+                <td>string</td>
+                <td>Visible toast text.</td>
+              </tr>
+              <tr>
+                <td><code>options.variant</code></td>
+                <td><code>"success" | "info" | "error"</code></td>
+                <td>Optional. Defaults to <code>info</code>.</td>
+              </tr>
+              <tr>
+                <td><code>options.durationMs</code></td>
+                <td>number</td>
+                <td>Optional. Uses extension defaults if omitted.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="mini muted">Success result: <code>{ shown: true, payload: { message, variant, durationMs } }</code>.</p>
+
+          <h3 style="margin-top:18px;"><code>bridge.download({ filename, content, mimeType? })</code></h3>
+          <p>Saves generated text content through the browser download manager.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>filename</code></td>
+                <td>string</td>
+                <td>Required. Sanitized before the browser sees it.</td>
+              </tr>
+              <tr>
+                <td><code>content</code></td>
+                <td>string</td>
+                <td>Required. Text only.</td>
+              </tr>
+              <tr>
+                <td><code>mimeType</code></td>
+                <td>string</td>
+                <td>Optional. Defaults to UTF-8 text.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="mini muted">Success result: <code>{ downloadId, filename, mimeType, sizeBytes }</code>.</p>
+
+          <h3 style="margin-top:18px;"><code>bridge.copyText(text)</code></h3>
+          <p>Copies generated text through the extension clipboard permission.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>text</code></td>
+                <td>string</td>
+                <td>Required. Text only. Clipboard content is not retained in logs.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="mini muted">Success result: <code>{ copied: true, sizeBytes }</code>.</p>
+        </section>
+
+        <section class="section" id="register">
+          <h2>Registration And Approval</h2>
+          <p>Before any action can run, the helper sends a registration message. Approval is tied to bookmarklet identity derived from:</p>
+          <ul>
+            <li><code>name</code></li>
+            <li><code>version</code></li>
+            <li>readable source derived from the bookmarklet</li>
+          </ul>
+          <p style="margin-top:14px;">If any of those change, the bridge treats it as a new bookmarklet definition and may require approval again.</p>
+          <pre><code>{
+  namespace: "bookmarklet-bridge",
+  version: 2,
+  kind: "register",
+  requestId: "unique-string",
+  executionId: "unique-per-run",
+  bookmarklet: {
+    name: "Example",
+    version: 1,
+    source: "async run(bridge) { ... }"
+  }
+}</code></pre>
+        </section>
+
+        <section class="section" id="responses">
+          <h2>Responses</h2>
+          <p>Every request receives exactly one response with the same <code>requestId</code>.</p>
+          <div class="grid two">
+            <div>
+              <h3>Success</h3>
+              <pre><code>{
+  namespace: "bookmarklet-bridge",
+  version: 2,
+  requestId: "same-request-id",
+  ok: true,
+  result: { ... }
+}</code></pre>
+            </div>
+            <div>
+              <h3>Error</h3>
+              <pre><code>{
+  namespace: "bookmarklet-bridge",
+  version: 2,
+  requestId: "same-request-id",
+  ok: false,
+  error: {
+    code: "invalid_request",
+    message: "payload.url must be a valid full URL."
+  }
+}</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="errors">
+          <h2>Error Codes</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Meaning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>approval_required</code></td><td>The bookmarklet must be reviewed first.</td></tr>
+              <tr><td><code>approval_dismissed</code></td><td>The approval flow was dismissed.</td></tr>
+              <tr><td><code>denied</code></td><td>The bookmarklet definition was denied.</td></tr>
+              <tr><td><code>invalid_request</code></td><td>The message shape or payload is invalid.</td></tr>
+              <tr><td><code>unsupported_action</code></td><td>The action name is not supported.</td></tr>
+              <tr><td><code>origin_not_allowed</code></td><td>The target origin is blocked by extension settings.</td></tr>
+              <tr><td><code>payload_too_large</code></td><td>The request exceeded a bridge size limit.</td></tr>
+              <tr><td><code>network_error</code></td><td>The network request failed.</td></tr>
+              <tr><td><code>timeout</code></td><td>The network request timed out.</td></tr>
+              <tr><td><code>download_failed</code></td><td>The browser could not start the download.</td></tr>
+              <tr><td><code>clipboard_write_failed</code></td><td>The browser could not write to the clipboard.</td></tr>
+              <tr><td><code>bridge_internal_error</code></td><td>An internal extension error occurred.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="section" id="limits">
+          <h2>Limits And Notes</h2>
+          <ul>
+            <li>Bridge messages use <code>namespace: "bookmarklet-bridge"</code> and <code>version: 2</code>.</li>
+            <li><code>executionId</code> stays stable within one bookmarklet run.</li>
+            <li>GET requests cannot include a request body.</li>
+            <li>POST bodies must be JSON-serializable.</li>
+            <li>Header count is capped.</li>
+            <li>Download content is capped at 1 MiB.</li>
+            <li>Clipboard text is capped at 256 KiB.</li>
+            <li>Logs intentionally avoid storing POST bodies, downloaded file contents, and clipboard text.</li>
+          </ul>
+        </section>
+
+        <section class="section" id="example">
+          <h2>Full Example</h2>
+          <pre><code>runBookmarklet({
+  name: "Page summary helper",
+  version: 1,
+  async run(bridge) {
+    const summary = [
+      "# " + (document.title || "Untitled"),
+      "",
+      location.href,
+      "",
+      window.getSelection ? String(window.getSelection()).trim() : ""
+    ].filter(Boolean).join("\n");
+
+    await bridge.copyText(summary);
+
+    await bridge.download({
+      filename: "page-summary.md",
+      content: summary,
+      mimeType: "text/markdown"
+    });
+
+    await bridge.toast("Summary copied and saved", {
+      variant: "success",
+      durationMs: 2200
+    });
+  }
+});</code></pre>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

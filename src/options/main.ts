@@ -71,6 +71,9 @@ function render(): void {
       <aside>
         <div class="title">Bookmarklet Bridge</div>
         <p class="muted">Review bookmarklet source, manage bridge policy, and generate bookmarklets with the simplified helper API.</p>
+        <div class="row" style="margin: 0 0 16px;">
+          <a class="button inline pastel-sage" href="api-reference.html" target="_blank" rel="noopener noreferrer">Open API Reference</a>
+        </div>
         <nav>
           ${navButton("settings", "Bridge Settings")}
           ${navButton("approved", "Approved")}

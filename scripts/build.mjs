@@ -35,6 +35,7 @@ async function buildTarget(name, browserTarget, manifestFile) {
   await cp(path.join(root, "assets", manifestFile), path.join(targetOutdir, "manifest.json"));
   await cp(path.join(root, "assets", "icons"), path.join(targetOutdir, "icons"), { recursive: true });
   await cp(path.join(root, "src", "options", "index.html"), path.join(targetOutdir, "options.html"));
+  await cp(path.join(root, "src", "docs", "api-reference.html"), path.join(targetOutdir, "api-reference.html"));
 }
 
 await rm(outdir, { recursive: true, force: true });

@@ -216,6 +216,7 @@ You can use it to:
 - review readable source and hashes
 - inspect recent logs
 - generate bookmarklets from a `run(bridge)` body
+- open the packaged static API reference for bridge method signatures and response shapes
 
 If behavior seems surprising, check the options page before changing code.
 
